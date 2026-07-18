@@ -112,6 +112,29 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
   const [msg, setMsg] = useState("");
   const [simatMsg, setSimatMsg] = useState("");
 
+  // Nuevo estudiante
+  const grados = GRADOS_ORDEN.filter(g => datosEscuela[g]);
+  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", telefono:"", grado: grados[0]||"" });
+  const [estMsg, setEstMsg] = useState("");
+
+  function agregarEstudiante() {
+    if (!nuevoEst.nombre.trim()) { setEstMsg("⚠️ El nombre es obligatorio"); return; }
+    if (!nuevoEst.grado) { setEstMsg("⚠️ Selecciona un grado"); return; }
+    const updated = JSON.parse(JSON.stringify(datosEscuela));
+    if (!updated[nuevoEst.grado]) return;
+    updated[nuevoEst.grado].estudiantes.push({
+      nombre: nuevoEst.nombre.trim().toUpperCase(),
+      genero: nuevoEst.genero,
+      estado: "MATRICULADO",
+      telefono: nuevoEst.telefono.trim()
+    });
+    saveStorage(DATA_KEY, updated);
+    onDataUpdate(updated);
+    setEstMsg("✅ Estudiante agregado a " + nuevoEst.grado);
+    setNuevoEst({ nombre:"", genero:"M", telefono:"", grado: nuevoEst.grado });
+    setTimeout(()=>setEstMsg(""), 3000);
+  }
+
   function guardarPass(username) {
     if (!newPass.trim()) return;
     const updated = { ...usuarios, [username]: { ...usuarios[username], password: newPass.trim() } };
@@ -174,7 +197,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
           <button onClick={onClose} style={{ background:"none", border:"none", color:"#fff", fontSize:20, cursor:"pointer" }}>✕</button>
         </div>
         <div style={{ display:"flex", borderBottom:"2px solid #e3e8f0", padding:"0 20px" }}>
-          {[["usuarios","👥 Usuarios"],["simat","📂 Cargar SIMAT"]].map(([k,l])=>(
+          {[["usuarios","👥 Usuarios"],["estudiantes","➕ Nuevo Estudiante"],["simat","📂 Importar SIMAT"]].map(([k,l])=>(
             <button key={k} onClick={()=>setSubTab(k)}
               style={{ padding:"10px 16px", border:"none", background:"none", cursor:"pointer", fontWeight:subTab===k?700:400,
                 color:subTab===k?"#1565c0":"#6b7280", borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent", marginBottom:-2, fontSize:13 }}>
@@ -228,6 +251,72 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {subTab === "estudiantes" && (
+            <div>
+              <div style={{ fontSize:13, color:"#6b7280", marginBottom:16 }}>
+                Agrega un nuevo estudiante a cualquier grado. Aparecerá inmediatamente en todos los formatos con estado <b>Matriculado</b>.
+              </div>
+              {estMsg && (
+                <div style={{ padding:"8px 12px", borderRadius:8, marginBottom:12, fontSize:13, fontWeight:600,
+                  background: estMsg.startsWith("✅")?"#d4edda":"#fff3cd",
+                  color: estMsg.startsWith("✅")?"#1e7e34":"#856404" }}>{estMsg}</div>
+              )}
+              <div style={{ display:"grid", gap:12 }}>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Apellidos y Nombres *</label>
+                  <input value={nuevoEst.nombre} onChange={e=>setNuevoEst({...nuevoEst, nombre:e.target.value})}
+                    placeholder="ej: GARCIA LOPEZ JUAN PABLO"
+                    style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Género</label>
+                    <select value={nuevoEst.genero} onChange={e=>setNuevoEst({...nuevoEst, genero:e.target.value})}
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13 }}>
+                      <option value="M">Masculino (M)</option>
+                      <option value="F">Femenino (F)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Teléfono</label>
+                    <input value={nuevoEst.telefono} onChange={e=>setNuevoEst({...nuevoEst, telefono:e.target.value})}
+                      placeholder="ej: 3001234567"
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Grado *</label>
+                  <select value={nuevoEst.grado} onChange={e=>setNuevoEst({...nuevoEst, grado:e.target.value})}
+                    style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13 }}>
+                    {grados.map(g=><option key={g} value={g}>{g} — {datosEscuela[g]?.tutor||"Sin tutor"}</option>)}
+                  </select>
+                </div>
+                <button onClick={agregarEstudiante}
+                  style={{ padding:"11px", borderRadius:8, background:"#1565c0", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
+                  ➕ Agregar Estudiante
+                </button>
+              </div>
+              {/* Preview lista del grado seleccionado */}
+              {nuevoEst.grado && datosEscuela[nuevoEst.grado] && (
+                <div style={{ marginTop:20 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:"#374151", marginBottom:8 }}>
+                    Estudiantes en {nuevoEst.grado} ({datosEscuela[nuevoEst.grado].estudiantes.length}):
+                  </div>
+                  <div style={{ maxHeight:180, overflowY:"auto", border:"1px solid #e9ecf0", borderRadius:8 }}>
+                    {datosEscuela[nuevoEst.grado].estudiantes.map((e,i)=>(
+                      <div key={i} style={{ padding:"6px 12px", fontSize:12, borderBottom:"1px solid #f0f4f8",
+                        background:i%2===0?"#fff":"#f9fbff", display:"flex", gap:8 }}>
+                        <span style={{ color:"#9ca3af", minWidth:24 }}>{i+1}</span>
+                        <span style={{ flex:1 }}>{e.nombre}</span>
+                        <span style={{ color:"#6b7280" }}>{e.genero}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
