@@ -508,8 +508,9 @@ export default function App() {
                         <td style={{...td,textAlign:"center",color:"#6b7280"}}>{est.genero}</td>
                         <td style={td}>
                           <select value={estado} onChange={e=>setEstado(i,e.target.value)}
-                            style={{ width:"100%", padding:"5px 8px", borderRadius:6, fontSize:12, fontWeight:600, border:`1.5px solid ${info.color}40`, background:info.bg, color:info.color, cursor:"pointer" }}>
-                            {ESTADOS.map(e=><option key={e.key} value={e.key}>{e.label}</option>)}
+                            disabled={!isAdmin && estado==="RETIRADO"}
+                            style={{ width:"100%", padding:"5px 8px", borderRadius:6, fontSize:12, fontWeight:600, border:`1.5px solid ${info.color}40`, background:info.bg, color:info.color, cursor: (!isAdmin && estado==="RETIRADO")?"not-allowed":"pointer", opacity:1 }}>
+                            {ESTADOS.filter(e => isAdmin || e.key !== "RETIRADO" || estado === "RETIRADO").map(e=><option key={e.key} value={e.key}>{e.label}</option>)}
                           </select>
                         </td>
                         {ESTADOS.slice(1).map(e=>(
