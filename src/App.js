@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react"; 
 import * as XLSX from "xlsx";
 
 // ─── DATOS EMBEBIDOS ──────────────────────────────────────────────────────
