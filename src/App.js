@@ -135,6 +135,15 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
     setTimeout(()=>setEstMsg(""), 3000);
   }
 
+  const [confirmarBorrar, setConfirmarBorrar] = useState(false);
+
+  function borrarBaseDatos() {
+    localStorage.clear();
+    saveStorage(DATA_KEY, DATOS_ESCUELA_INICIAL);
+    saveStorage(USERS_KEY, USUARIOS_INICIALES);
+    window.location.reload();
+  }
+
   function guardarPass(username) {
     if (!newPass.trim()) return;
     const updated = { ...usuarios, [username]: { ...usuarios[username], password: newPass.trim() } };
@@ -197,7 +206,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
           <button onClick={onClose} style={{ background:"none", border:"none", color:"#fff", fontSize:20, cursor:"pointer" }}>✕</button>
         </div>
         <div style={{ display:"flex", borderBottom:"2px solid #e3e8f0", padding:"0 20px" }}>
-          {[["usuarios","👥 Usuarios"],["estudiantes","➕ Nuevo Estudiante"],["simat","📂 Importar SIMAT"]].map(([k,l])=>(
+          {[["usuarios","👥 Usuarios"],["estudiantes","➕ Nuevo Estudiante"],["simat","📂 Importar SIMAT"],["borrar","🗑️ Borrar BD"]].map(([k,l])=>(
             <button key={k} onClick={()=>setSubTab(k)}
               style={{ padding:"10px 16px", border:"none", background:"none", cursor:"pointer", fontWeight:subTab===k?700:400,
                 color:subTab===k?"#1565c0":"#6b7280", borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent", marginBottom:-2, fontSize:13 }}>
@@ -317,6 +326,42 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {subTab === "borrar" && (
+            <div>
+              <div style={{ background:"#fff5f5", border:"2px solid #dc354530", borderRadius:12, padding:24, textAlign:"center" }}>
+                <div style={{ fontSize:48, marginBottom:8 }}>⚠️</div>
+                <div style={{ fontWeight:700, fontSize:16, color:"#721c24", marginBottom:8 }}>Borrar Base de Datos</div>
+                <div style={{ fontSize:13, color:"#6b7280", marginBottom:20, lineHeight:1.6 }}>
+                  Esta acción eliminará <strong>todos los estados de comisión, asistencia, notas y entregas</strong> registrados.<br/>
+                  Los datos de estudiantes del SIMAT se mantendrán.<br/>
+                  <strong>Esta acción no se puede deshacer.</strong>
+                </div>
+                {!confirmarBorrar ? (
+                  <button onClick={()=>setConfirmarBorrar(true)}
+                    style={{ padding:"10px 28px", borderRadius:8, background:"#dc3545", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
+                    🗑️ Borrar todos los datos
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:600, color:"#721c24", marginBottom:12 }}>
+                      ¿Estás seguro? Esta acción es irreversible.
+                    </div>
+                    <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
+                      <button onClick={borrarBaseDatos}
+                        style={{ padding:"10px 24px", borderRadius:8, background:"#dc3545", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
+                        ✅ Sí, borrar todo
+                      </button>
+                      <button onClick={()=>setConfirmarBorrar(false)}
+                        style={{ padding:"10px 24px", borderRadius:8, background:"#e9ecef", color:"#374151", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
+                        ❌ Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
