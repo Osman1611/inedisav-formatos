@@ -120,7 +120,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
 
   // Nuevo estudiante
   const grados = GRADOS_ORDEN.filter(g => datosEscuela[g]);
-  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", telefono:"", grado: grados[0]||"", ruta:"", transportador:"" });
+  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", documento:"", perid:"", simatEst:"NO REGISTRADO", telefono:"", grado: grados[0]||"", ruta:"", transportador:"" });
   const [estMsg, setEstMsg] = useState("");
 
   function agregarEstudiante() {
@@ -131,8 +131,10 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
     updated[nuevoEst.grado].estudiantes.push({
       nombre: nuevoEst.nombre.trim().toUpperCase(),
       genero: nuevoEst.genero,
+      documento: nuevoEst.documento.trim(),
+      perid: nuevoEst.perid.trim(),
+      simat: nuevoEst.simatEst || "NO REGISTRADO",
       estado: "MATRICULADO",
-      simat: "NO REGISTRADO",
       telefono: nuevoEst.telefono.trim(),
       ruta: nuevoEst.ruta.trim(),
       transportador: nuevoEst.transportador.trim()
@@ -311,6 +313,27 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                       placeholder="ej: 3001234567"
                       style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
                   </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Documento de Identidad</label>
+                    <input value={nuevoEst.documento} onChange={e=>setNuevoEst({...nuevoEst, documento:e.target.value})}
+                      placeholder="ej: 1234567890"
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>PERID</label>
+                    <input value={nuevoEst.perid} onChange={e=>setNuevoEst({...nuevoEst, perid:e.target.value})}
+                      placeholder="ej: 123456"
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Estado SIMAT</label>
+                  <select value={nuevoEst.simatEst} onChange={e=>setNuevoEst({...nuevoEst, simatEst:e.target.value})}
+                    style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13 }}>
+                    {SIMAT_ESTADOS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                   <div>
