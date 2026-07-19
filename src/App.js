@@ -120,7 +120,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
 
   // Nuevo estudiante
   const grados = GRADOS_ORDEN.filter(g => datosEscuela[g]);
-  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", telefono:"", grado: grados[0]||"" });
+  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", telefono:"", grado: grados[0]||"", ruta:"", transportador:"" });
   const [estMsg, setEstMsg] = useState("");
 
   function agregarEstudiante() {
@@ -133,7 +133,9 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
       genero: nuevoEst.genero,
       estado: "MATRICULADO",
       simat: "NO REGISTRADO",
-      telefono: nuevoEst.telefono.trim()
+      telefono: nuevoEst.telefono.trim(),
+      ruta: nuevoEst.ruta.trim(),
+      transportador: nuevoEst.transportador.trim()
     });
     saveStorage(DATA_KEY, updated);
     onDataUpdate(updated);
@@ -195,7 +197,9 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
           const estado = estadoRaw && estadoRaw !== "NAN" && estadoRaw !== "" ? estadoRaw : "MATRICULADO";
           if (!nombre) return;
           const simatVal = (r["SIMAT"]||r["Simat"]||r["simat"]||"NO REGISTRADO").toString().trim().toUpperCase();
-          newData[grado].estudiantes.push({ nombre, genero, estado, simat: simatVal||"NO REGISTRADO", telefono: tel });
+          const ruta = (r["RUTA"]||r["Ruta"]||r["ruta"]||"").toString().trim();
+          const transportador = (r["TRANSPORTADOR"]||r["Transportador"]||r["transportador"]||"").toString().trim();
+          newData[grado].estudiantes.push({ nombre, genero, estado, simat: simatVal||"NO REGISTRADO", telefono: tel, ruta, transportador });
         });
 
         saveStorage(DATA_KEY, newData);
@@ -308,6 +312,20 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                       style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
                   </div>
                 </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Ruta</label>
+                    <input value={nuevoEst.ruta} onChange={e=>setNuevoEst({...nuevoEst, ruta:e.target.value})}
+                      placeholder="ej: Ruta 3"
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Transportador</label>
+                    <input value={nuevoEst.transportador} onChange={e=>setNuevoEst({...nuevoEst, transportador:e.target.value})}
+                      placeholder="ej: Juan Pérez"
+                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
+                  </div>
+                </div>
                 <div>
                   <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Grado *</label>
                   <select value={nuevoEst.grado} onChange={e=>setNuevoEst({...nuevoEst, grado:e.target.value})}
@@ -333,6 +351,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                         <span style={{ color:"#9ca3af", minWidth:24 }}>{i+1}</span>
                         <span style={{ flex:1 }}>{e.nombre}</span>
                         <span style={{ color:"#6b7280" }}>{e.genero}</span>
+                        {e.ruta && <span style={{ color:"#1565c0", fontSize:11 }}>🚌 {e.ruta}</span>}
                       </div>
                     ))}
                   </div>
