@@ -18,6 +18,12 @@ const ESTADOS = [
   { key:"CONTINUIDAD",             label:"Continuidad",          color:"#495057", bg:"#e9ecef" },
 ];
 
+const SIMAT_ESTADOS = [
+  { key:"REGISTRADO",     label:"Registrado",     color:"#1e7e34", bg:"#d4edda" },
+  { key:"NO LIBERADO",    label:"No Liberado",    color:"#856404", bg:"#fff3cd" },
+  { key:"NO REGISTRADO",  label:"No Registrado",  color:"#721c24", bg:"#f8d7da" },
+];
+
 const SEMANAS = ["S1","S2","S3","S4"];
 const DIAS = ["L","M","M","J","V"];
 const PERIODOS = ["P1","P2","P3","P4"];
@@ -126,6 +132,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
       nombre: nuevoEst.nombre.trim().toUpperCase(),
       genero: nuevoEst.genero,
       estado: "MATRICULADO",
+      simat: "NO REGISTRADO",
       telefono: nuevoEst.telefono.trim()
     });
     saveStorage(DATA_KEY, updated);
@@ -168,22 +175,27 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
         // Build tutor map from Tipos sheet (columns R and S = indices 17,18)
         const tutorMap = {};
         tipos.forEach(row => {
-          if (row[17] && row[18]) tutorMap[row[17]] = row[18];
+          if (row[17] && row[18]) tutorMap[String(row[17]).trim()] = String(row[18]).trim();
         });
 
         const newData = {};
         simat.forEach(r => {
-          const grado = r["Grado"] || r["GRADO"] || "";
+          const grado = (r["GRADO"]||r["Grado"]||r["grado"]||"").toString().trim();
           if (!grado) return;
           if (!newData[grado]) newData[grado] = { tutor: tutorMap[grado]||"", estudiantes:[] };
           let tel = "";
-          try { const t = parseInt(r["TELEFONO"]||r["Telefono"]||""); if(t&&t>0) tel=String(t); } catch{}
-          newData[grado].estudiantes.push({
-            nombre: (r["APELLIDOS_Y_NOMBRES"]||r["Apellidos y Nombres"]||"").toString().trim(),
-            genero: (r["GENERO"]||r["Genero"]||"").toString().trim(),
-            estado: (r["COMISION FINAL"]||r["Comision Final"]||"MATRICULADO").toString().trim(),
-            telefono: tel
-          });
+          try {
+            const telRaw = r["TELEFONO"]||r["Telefono"]||r["telefono"]||"";
+            const t = parseInt(String(telRaw).replace(/\D/g,""));
+            if(t&&t>0) tel=String(t);
+          } catch{}
+          const nombre = (r["APELLIDOS_Y_NOMBRES"]||r["Apellidos y Nombres"]||r["NOMBRE"]||"").toString().trim();
+          const genero = (r["GENERO"]||r["Genero"]||r["GÉNERO"]||"").toString().trim().toUpperCase();
+          const estadoRaw = (r["COMISION FINAL"]||r["Comision Final"]||r["ESTADO"]||"MATRICULADO").toString().trim().toUpperCase();
+          const estado = estadoRaw && estadoRaw !== "NAN" && estadoRaw !== "" ? estadoRaw : "MATRICULADO";
+          if (!nombre) return;
+          const simatVal = (r["SIMAT"]||r["Simat"]||r["simat"]||"NO REGISTRADO").toString().trim().toUpperCase();
+          newData[grado].estudiantes.push({ nombre, genero, estado, simat: simatVal||"NO REGISTRADO", telefono: tel });
         });
 
         saveStorage(DATA_KEY, newData);
@@ -444,6 +456,8 @@ export default function App() {
   function getNota(idx,p,s)     { return appState?.[gradoSel]?.notas?.[idx]?.[p]?.[s]??""; }
   function setNota(idx,per,sab,v){ update(p=>{ if(!p[gradoSel])p[gradoSel]={}; if(!p[gradoSel].notas)p[gradoSel].notas={}; if(!p[gradoSel].notas[idx])p[gradoSel].notas[idx]={}; if(!p[gradoSel].notas[idx][per])p[gradoSel].notas[idx][per]={}; p[gradoSel].notas[idx][per][sab]=v; return p; }); }
   function getEntrega(idx)      { return appState?.[gradoSel]?.entregas?.[idx]??false; }
+  function getSimat(idx)        { return appState?.[gradoSel]?.simat?.[idx] ?? estudiantes[idx]?.simat ?? "NO REGISTRADO"; }
+  function setSimat(idx, val)   { update(p=>{ if(!p[gradoSel])p[gradoSel]={}; if(!p[gradoSel].simat)p[gradoSel].simat={}; p[gradoSel].simat[idx]=val; return p; }); }
   function toggleEntrega(idx)   { update(p=>{ if(!p[gradoSel])p[gradoSel]={}; if(!p[gradoSel].entregas)p[gradoSel].entregas={}; p[gradoSel].entregas[idx]=!p[gradoSel].entregas[idx]; return p; }); }
   function calcProm(idx,per)    { const v=SABERES.map(s=>parseFloat(getNota(idx,per,s))).filter(n=>!isNaN(n)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):""; }
   function calcPromGeneral(idx) { const v=PERIODOS.flatMap(p=>SABERES.map(s=>parseFloat(getNota(idx,p,s)))).filter(n=>!isNaN(n)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):""; }
@@ -631,6 +645,7 @@ export default function App() {
                     <th style={th}>Gén.</th>
                     <th style={{...th,minWidth:180}}>Estado Comisión</th>
                     {ESTADOS.slice(1).map(e=><th key={e.key} style={{...th,fontSize:10,maxWidth:60,lineHeight:1.2}}>{e.label}</th>)}
+                    {isAdmin && <th style={{...th,minWidth:140,fontSize:10,background:"#1e3a5f",color:"#fff"}}>Estado SIMAT</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -653,6 +668,18 @@ export default function App() {
                             {estado===e.key?<span style={{fontSize:16}}>✓</span>:<span style={{color:"#d1d5db"}}>–</span>}
                           </td>
                         ))}
+                        {isAdmin && (()=>{
+                          const sv=getSimat(i), si=SIMAT_ESTADOS.find(s=>s.key===sv)||SIMAT_ESTADOS[2];
+                          return(
+                            <td style={{...td}}>
+                              <select value={sv} onChange={e=>setSimat(i,e.target.value)}
+                                style={{width:"100%",padding:"5px 8px",borderRadius:6,fontSize:11,fontWeight:600,
+                                  border:`1.5px solid ${si.color}40`,background:si.bg,color:si.color,cursor:"pointer"}}>
+                                {SIMAT_ESTADOS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
+                              </select>
+                            </td>
+                          );
+                        })()}
                       </tr>
                     );
                   })}
