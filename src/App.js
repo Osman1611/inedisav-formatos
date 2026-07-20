@@ -18,12 +18,6 @@ const ESTADOS = [
   { key:"CONTINUIDAD",             label:"Continuidad",          color:"#495057", bg:"#e9ecef" },
 ];
 
-const SIMAT_ESTADOS = [
-  { key:"REGISTRADO",     label:"Registrado",     color:"#1e7e34", bg:"#d4edda" },
-  { key:"NO LIBERADO",    label:"No Liberado",    color:"#856404", bg:"#fff3cd" },
-  { key:"NO REGISTRADO",  label:"No Registrado",  color:"#721c24", bg:"#f8d7da" },
-];
-
 const SEMANAS = ["S1","S2","S3","S4"];
 const DIAS = ["L","M","M","J","V"];
 const PERIODOS = ["P1","P2","P3","P4"];
@@ -120,7 +114,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
 
   // Nuevo estudiante
   const grados = GRADOS_ORDEN.filter(g => datosEscuela[g]);
-  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", documento:"", perid:"", simatEst:"NO REGISTRADO", telefono:"", grado: grados[0]||"", ruta:"", transportador:"", fechaNac:"" });
+  const [nuevoEst, setNuevoEst] = useState({ nombre:"", genero:"M", telefono:"", grado: grados[0]||"" });
   const [estMsg, setEstMsg] = useState("");
 
   function agregarEstudiante() {
@@ -131,29 +125,14 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
     updated[nuevoEst.grado].estudiantes.push({
       nombre: nuevoEst.nombre.trim().toUpperCase(),
       genero: nuevoEst.genero,
-      documento: nuevoEst.documento.trim(),
-      perid: nuevoEst.perid.trim(),
-      simat: nuevoEst.simatEst || "NO REGISTRADO",
       estado: "MATRICULADO",
-      telefono: nuevoEst.telefono.trim(),
-      ruta: nuevoEst.ruta.trim(),
-      transportador: nuevoEst.transportador.trim(),
-      fechaNac: nuevoEst.fechaNac
+      telefono: nuevoEst.telefono.trim()
     });
     saveStorage(DATA_KEY, updated);
     onDataUpdate(updated);
     setEstMsg("✅ Estudiante agregado a " + nuevoEst.grado);
     setNuevoEst({ nombre:"", genero:"M", telefono:"", grado: nuevoEst.grado });
     setTimeout(()=>setEstMsg(""), 3000);
-  }
-
-  const [confirmarBorrar, setConfirmarBorrar] = useState(false);
-
-  function borrarBaseDatos() {
-    localStorage.clear();
-    saveStorage(DATA_KEY, DATOS_ESCUELA_INICIAL);
-    saveStorage(USERS_KEY, USUARIOS_INICIALES);
-    window.location.reload();
   }
 
   function guardarPass(username) {
@@ -180,30 +159,22 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
         // Build tutor map from Tipos sheet (columns R and S = indices 17,18)
         const tutorMap = {};
         tipos.forEach(row => {
-          if (row[17] && row[18]) tutorMap[String(row[17]).trim()] = String(row[18]).trim();
+          if (row[17] && row[18]) tutorMap[row[17]] = row[18];
         });
 
         const newData = {};
         simat.forEach(r => {
-          const grado = (r["GRADO"]||r["Grado"]||r["grado"]||"").toString().trim();
+          const grado = r["Grado"] || r["GRADO"] || "";
           if (!grado) return;
           if (!newData[grado]) newData[grado] = { tutor: tutorMap[grado]||"", estudiantes:[] };
           let tel = "";
-          try {
-            const telRaw = r["TELEFONO"]||r["Telefono"]||r["telefono"]||"";
-            const t = parseInt(String(telRaw).replace(/\D/g,""));
-            if(t&&t>0) tel=String(t);
-          } catch{}
-          const nombre = (r["APELLIDOS_Y_NOMBRES"]||r["Apellidos y Nombres"]||r["NOMBRE"]||"").toString().trim();
-          const genero = (r["GENERO"]||r["Genero"]||r["GÉNERO"]||"").toString().trim().toUpperCase();
-          const estadoRaw = (r["COMISION FINAL"]||r["Comision Final"]||r["ESTADO"]||"MATRICULADO").toString().trim().toUpperCase();
-          const estado = estadoRaw && estadoRaw !== "NAN" && estadoRaw !== "" ? estadoRaw : "MATRICULADO";
-          if (!nombre) return;
-          const simatVal = (r["SIMAT"]||r["Simat"]||r["simat"]||"NO REGISTRADO").toString().trim().toUpperCase();
-          const ruta = (r["RUTA"]||r["Ruta"]||r["ruta"]||"").toString().trim();
-          const transportador = (r["TRANSPORTADOR"]||r["Transportador"]||r["transportador"]||"").toString().trim();
-          const fechaNac = (r["FECHA_NACIMIENTO"]||r["Fecha Nacimiento"]||r["FECHA NACIMIENTO"]||r["FechaNacimiento"]||"").toString().trim();
-          newData[grado].estudiantes.push({ nombre, genero, estado, simat: simatVal||"NO REGISTRADO", telefono: tel, ruta, transportador, fechaNac });
+          try { const t = parseInt(r["TELEFONO"]||r["Telefono"]||""); if(t&&t>0) tel=String(t); } catch{}
+          newData[grado].estudiantes.push({
+            nombre: (r["APELLIDOS_Y_NOMBRES"]||r["Apellidos y Nombres"]||"").toString().trim(),
+            genero: (r["GENERO"]||r["Genero"]||"").toString().trim(),
+            estado: (r["COMISION FINAL"]||r["Comision Final"]||"MATRICULADO").toString().trim(),
+            telefono: tel
+          });
         });
 
         saveStorage(DATA_KEY, newData);
@@ -216,7 +187,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
     reader.readAsArrayBuffer(file);
   }
 
-  // userList not needed anymore — rendered directly
+  const userList = Object.entries(usuarios).filter(([,u])=>u.role==="docente");
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -226,7 +197,7 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
           <button onClick={onClose} style={{ background:"none", border:"none", color:"#fff", fontSize:20, cursor:"pointer" }}>✕</button>
         </div>
         <div style={{ display:"flex", borderBottom:"2px solid #e3e8f0", padding:"0 20px" }}>
-          {[["usuarios","👥 Usuarios"],["estudiantes","➕ Nuevo Estudiante"],["tipos","🏫 Grados y Tutores"],["simat","📂 Importar SIMAT"],["borrar","🗑️ Borrar BD"]].map(([k,l])=>(
+          {[["usuarios","👥 Usuarios"],["estudiantes","➕ Nuevo Estudiante"],["simat","📂 Importar SIMAT"]].map(([k,l])=>(
             <button key={k} onClick={()=>setSubTab(k)}
               style={{ padding:"10px 16px", border:"none", background:"none", cursor:"pointer", fontWeight:subTab===k?700:400,
                 color:subTab===k?"#1565c0":"#6b7280", borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent", marginBottom:-2, fontSize:13 }}>
@@ -242,95 +213,6 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
               <div style={{ fontSize:13, color:"#6b7280", marginBottom:12 }}>
                 Gestiona las contraseñas de los docentes. Usuario = primera parte del nombre.
               </div>
-              {/* Formulario crear nuevo usuario */}
-              {(() => {
-                const [showNuevoUser, setShowNuevoUser] = React.useState(false);
-                const [nuevoUser, setNuevoUser] = React.useState({ username:"", password:"", nombre:"", role:"docente", grado:"" });
-                const [nuevoUserMsg, setNuevoUserMsg] = React.useState("");
-                const gradosDisp2 = GRADOS_ORDEN.filter(g => datosEscuela[g]);
-
-                function crearUsuario() {
-                  if (!nuevoUser.username.trim()) { setNuevoUserMsg("⚠️ El usuario es obligatorio"); return; }
-                  if (!nuevoUser.password.trim()) { setNuevoUserMsg("⚠️ La contraseña es obligatoria"); return; }
-                  if (!nuevoUser.nombre.trim())   { setNuevoUserMsg("⚠️ El nombre es obligatorio"); return; }
-                  if (nuevoUser.role === "docente" && !nuevoUser.grado) { setNuevoUserMsg("⚠️ Selecciona un grado para el docente"); return; }
-                  const key = nuevoUser.username.trim().toLowerCase();
-                  if (usuarios[key]) { setNuevoUserMsg("⚠️ Ese usuario ya existe"); return; }
-                  const updated = { ...usuarios, [key]: {
-                    password: nuevoUser.password.trim(),
-                    role: nuevoUser.role,
-                    nombre: nuevoUser.nombre.trim().toUpperCase(),
-                    grado: nuevoUser.role === "docente" ? nuevoUser.grado : null
-                  }};
-                  setUsuarios(updated);
-                  saveStorage(USERS_KEY, updated);
-                  setNuevoUserMsg("✅ Usuario creado: " + key);
-                  setNuevoUser({ username:"", password:"", nombre:"", role:"docente", grado:"" });
-                  setTimeout(()=>setNuevoUserMsg(""), 3000);
-                }
-
-                return (
-                  <div style={{ marginBottom:16 }}>
-                    <button onClick={()=>setShowNuevoUser(!showNuevoUser)}
-                      style={{ padding:"8px 18px", borderRadius:8, background:"#1565c0", color:"#fff", fontWeight:700, fontSize:13, border:"none", cursor:"pointer", marginBottom: showNuevoUser?12:0 }}>
-                      ➕ Crear nuevo usuario
-                    </button>
-                    {showNuevoUser && (
-                      <div style={{ background:"#f0f4ff", border:"1.5px solid #1565c030", borderRadius:10, padding:16 }}>
-                        {nuevoUserMsg && (
-                          <div style={{ padding:"7px 12px", borderRadius:7, marginBottom:10, fontSize:12, fontWeight:600,
-                            background: nuevoUserMsg.startsWith("✅")?"#d4edda":"#fff3cd",
-                            color: nuevoUserMsg.startsWith("✅")?"#1e7e34":"#856404" }}>{nuevoUserMsg}</div>
-                        )}
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-                          <div>
-                            <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Usuario *</label>
-                            <input value={nuevoUser.username} onChange={e=>setNuevoUser({...nuevoUser, username:e.target.value.toLowerCase().replace(/\s/g,"")})}
-                              placeholder="ej: maria.perez"
-                              style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d1d5db", fontSize:12, boxSizing:"border-box" }}/>
-                          </div>
-                          <div>
-                            <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Contraseña *</label>
-                            <input value={nuevoUser.password} onChange={e=>setNuevoUser({...nuevoUser, password:e.target.value})}
-                              placeholder="ej: maria2026"
-                              style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d1d5db", fontSize:12, boxSizing:"border-box" }}/>
-                          </div>
-                          <div>
-                            <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Nombre completo *</label>
-                            <input value={nuevoUser.nombre} onChange={e=>setNuevoUser({...nuevoUser, nombre:e.target.value})}
-                              placeholder="ej: MARIA PEREZ GOMEZ"
-                              style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d1d5db", fontSize:12, boxSizing:"border-box" }}/>
-                          </div>
-                          <div>
-                            <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Rol *</label>
-                            <select value={nuevoUser.role} onChange={e=>setNuevoUser({...nuevoUser, role:e.target.value, grado:""})}
-                              style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d1d5db", fontSize:12 }}>
-                              <option value="docente">👤 Docente</option>
-                              <option value="coordinador">📋 Coordinador</option>
-                              <option value="admin">👑 Administrador</option>
-                            </select>
-                          </div>
-                          {nuevoUser.role === "docente" && (
-                            <div style={{ gridColumn:"1/-1" }}>
-                              <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Grado asignado *</label>
-                              <select value={nuevoUser.grado} onChange={e=>setNuevoUser({...nuevoUser, grado:e.target.value})}
-                                style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d1d5db", fontSize:12 }}>
-                                <option value="">— Selecciona un grado —</option>
-                                {gradosDisp2.map(g=><option key={g} value={g}>{g} — {datosEscuela[g]?.tutor||""}</option>)}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                        <button onClick={crearUsuario}
-                          style={{ padding:"8px 20px", borderRadius:7, background:"#1e7e34", color:"#fff", fontWeight:700, fontSize:13, border:"none", cursor:"pointer" }}>
-                          ✅ Guardar usuario
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
               {/* Admin row */}
               <div style={{ background:"#e8edf5", borderRadius:8, padding:"10px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
                 <span style={{ fontSize:18 }}>👑</span>
@@ -349,31 +231,26 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                   <button onClick={()=>setEditUser("admin")} style={{ padding:"5px 12px", borderRadius:6, background:"#e9ecef", border:"none", cursor:"pointer", fontSize:12 }}>🔑 Cambiar clave</button>
                 )}
               </div>
-              {/* Todos los usuarios: coordinadores, admins adicionales, docentes */}
-              {Object.entries(usuarios).filter(([k])=>k!=="admin").map(([username, u]) => {
-                const roleIcon = u.role==="admin"?"👑":u.role==="coordinador"?"📋":"👤";
-                const roleLabel = u.role==="admin"?"Administrador":u.role==="coordinador"?"Coordinador":"Docente";
-                const roleBg = u.role==="admin"?"#e8edf5":u.role==="coordinador"?"#f3d9fa":"#fff";
-                return (
-                  <div key={username} style={{ border:"1px solid #e9ecf0", borderRadius:8, padding:"10px 14px", marginBottom:6, display:"flex", alignItems:"center", gap:12, background:roleBg }}>
-                    <span style={{ fontSize:18 }}>{roleIcon}</span>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:600, fontSize:13 }}>{username} <span style={{ fontSize:10, color:"#6b7280", fontWeight:400 }}>({roleLabel})</span></div>
-                      <div style={{ fontSize:11, color:"#6b7280" }}>{u.nombre}{u.grado ? " · " + u.grado : ""}</div>
-                    </div>
-                    {editUser === username ? (
-                      <div style={{ display:"flex", gap:6 }}>
-                        <input value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="Nueva clave"
-                          style={{ padding:"5px 8px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, width:120 }}/>
-                        <button onClick={()=>guardarPass(username)} style={{ padding:"5px 10px", borderRadius:6, background:"#1565c0", color:"#fff", border:"none", cursor:"pointer", fontSize:12 }}>Guardar</button>
-                        <button onClick={()=>setEditUser(null)} style={{ padding:"5px 10px", borderRadius:6, background:"#e9ecef", border:"none", cursor:"pointer", fontSize:12 }}>✕</button>
-                      </div>
-                    ) : (
-                      <button onClick={()=>{setEditUser(username);setNewPass("");}} style={{ padding:"5px 12px", borderRadius:6, background:"#e9ecef", border:"none", cursor:"pointer", fontSize:12 }}>🔑 Cambiar clave</button>
-                    )}
+              {/* Docentes */}
+              {userList.map(([username, u]) => (
+                <div key={username} style={{ border:"1px solid #e9ecf0", borderRadius:8, padding:"10px 14px", marginBottom:6, display:"flex", alignItems:"center", gap:12 }}>
+                  <span style={{ fontSize:18 }}>👤</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:13 }}>{username}</div>
+                    <div style={{ fontSize:11, color:"#6b7280" }}>{u.nombre} · {u.grado}</div>
                   </div>
-                );
-              })}
+                  {editUser === username ? (
+                    <div style={{ display:"flex", gap:6 }}>
+                      <input value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="Nueva clave"
+                        style={{ padding:"5px 8px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, width:120 }}/>
+                      <button onClick={()=>guardarPass(username)} style={{ padding:"5px 10px", borderRadius:6, background:"#1565c0", color:"#fff", border:"none", cursor:"pointer", fontSize:12 }}>Guardar</button>
+                      <button onClick={()=>setEditUser(null)} style={{ padding:"5px 10px", borderRadius:6, background:"#e9ecef", border:"none", cursor:"pointer", fontSize:12 }}>✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={()=>{setEditUser(username);setNewPass("");}} style={{ padding:"5px 12px", borderRadius:6, background:"#e9ecef", border:"none", cursor:"pointer", fontSize:12 }}>🔑 Cambiar clave</button>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
@@ -410,48 +287,6 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                       style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
                   </div>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Documento de Identidad</label>
-                    <input value={nuevoEst.documento} onChange={e=>setNuevoEst({...nuevoEst, documento:e.target.value})}
-                      placeholder="ej: 1234567890"
-                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
-                  </div>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>PERID</label>
-                    <input value={nuevoEst.perid} onChange={e=>setNuevoEst({...nuevoEst, perid:e.target.value})}
-                      placeholder="ej: 123456"
-                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
-                  </div>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Fecha de Nacimiento</label>
-                    <input type="date" value={nuevoEst.fechaNac} onChange={e=>setNuevoEst({...nuevoEst, fechaNac:e.target.value})}
-                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
-                  </div>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Estado SIMAT</label>
-                    <select value={nuevoEst.simatEst} onChange={e=>setNuevoEst({...nuevoEst, simatEst:e.target.value})}
-                    style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13 }}>
-                    {SIMAT_ESTADOS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
-                  </select>
-                  </div>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Ruta</label>
-                    <input value={nuevoEst.ruta} onChange={e=>setNuevoEst({...nuevoEst, ruta:e.target.value})}
-                      placeholder="ej: Ruta 3"
-                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
-                  </div>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Transportador</label>
-                    <input value={nuevoEst.transportador} onChange={e=>setNuevoEst({...nuevoEst, transportador:e.target.value})}
-                      placeholder="ej: Juan Pérez"
-                      style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
-                  </div>
-                </div>
                 <div>
                   <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:4 }}>Grado *</label>
                   <select value={nuevoEst.grado} onChange={e=>setNuevoEst({...nuevoEst, grado:e.target.value})}
@@ -464,284 +299,24 @@ function AdminPanel({ onClose, datosEscuela, onDataUpdate }) {
                   ➕ Agregar Estudiante
                 </button>
               </div>
-              {/* Lista editable de estudiantes del grado */}
-              {nuevoEst.grado && datosEscuela[nuevoEst.grado] && (()=>{
-                const [editIdx, setEditIdx] = React.useState(null);
-                const [editData, setEditData] = React.useState({});
-                const [editMsg, setEditMsg] = React.useState("");
-                const ests = datosEscuela[nuevoEst.grado].estudiantes;
-
-                function startEdit(i) {
-                  setEditIdx(i);
-                  setEditData({...ests[i]});
-                }
-                function cancelEdit() { setEditIdx(null); setEditData({}); }
-                function saveEdit() {
-                  if (!editData.nombre?.trim()) { setEditMsg("⚠️ El nombre es obligatorio"); return; }
-                  const updated = JSON.parse(JSON.stringify(datosEscuela));
-                  updated[nuevoEst.grado].estudiantes[editIdx] = { ...editData, nombre: editData.nombre.trim().toUpperCase() };
-                  saveStorage(DATA_KEY, updated);
-                  onDataUpdate(updated);
-
-                  // Sync simat state in appState
-                  const curAppState = loadStorage(STORAGE_KEY, {});
-                  if (!curAppState[nuevoEst.grado]) curAppState[nuevoEst.grado] = {};
-                  if (!curAppState[nuevoEst.grado].simat) curAppState[nuevoEst.grado].simat = {};
-                  curAppState[nuevoEst.grado].simat[editIdx] = editData.simat || "NO REGISTRADO";
-                  saveStorage(STORAGE_KEY, curAppState);
-
-                  setEditIdx(null); setEditData({});
-                  setEditMsg("✅ Estudiante actualizado");
-                  setTimeout(()=>setEditMsg(""), 2500);
-                }
-                function deleteEst(i) {
-                  if (!window.confirm("¿Eliminar este estudiante? Esta acción también borrará sus datos de comisión, asistencia y notas.")) return;
-                  const updated = JSON.parse(JSON.stringify(datosEscuela));
-                  updated[nuevoEst.grado].estudiantes.splice(i, 1);
-                  saveStorage(DATA_KEY, updated);
-                  onDataUpdate(updated);
-
-                  // Re-index appState for this grade: remove index i, shift down the rest
-                  const curAppState = loadStorage(STORAGE_KEY, {});
-                  const gradeState = curAppState[nuevoEst.grado] || {};
-                  ["comisiones","asistencia","notas","entregas","simat"].forEach(section => {
-                    if (!gradeState[section]) return;
-                    const reindexed = {};
-                    Object.entries(gradeState[section]).forEach(([idx, val]) => {
-                      const n = parseInt(idx);
-                      if (n < i) reindexed[n] = val;
-                      else if (n > i) reindexed[n - 1] = val;
-                      // n === i is dropped
-                    });
-                    gradeState[section] = reindexed;
-                  });
-                  curAppState[nuevoEst.grado] = gradeState;
-                  saveStorage(STORAGE_KEY, curAppState);
-
-                  setEditMsg("✅ Estudiante eliminado");
-                  setTimeout(()=>setEditMsg(""), 2500);
-                }
-
-                return (
-                  <div style={{ marginTop:20 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#1e3a5f", marginBottom:8 }}>
-                      Estudiantes en {nuevoEst.grado} ({ests.length}) — click en ✏️ para editar
-                    </div>
-                    {editMsg && (
-                      <div style={{ padding:"6px 12px", borderRadius:7, marginBottom:8, fontSize:12, fontWeight:600,
-                        background: editMsg.startsWith("✅")?"#d4edda":"#fff3cd",
-                        color: editMsg.startsWith("✅")?"#1e7e34":"#856404" }}>{editMsg}</div>
-                    )}
-                    <div style={{ maxHeight:320, overflowY:"auto", border:"1px solid #e9ecf0", borderRadius:10 }}>
-                      {ests.map((e,i)=>(
-                        <div key={i}>
-                          {editIdx === i ? (
-                            /* MODO EDICIÓN */
-                            <div style={{ background:"#f0f4ff", border:"2px solid #1565c040", padding:12, margin:4, borderRadius:8 }}>
-                              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
-                                <div style={{ gridColumn:"1/-1" }}>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Apellidos y Nombres</label>
-                                  <input value={editData.nombre||""} onChange={ev=>setEditData({...editData,nombre:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Género</label>
-                                  <select value={editData.genero||"M"} onChange={ev=>setEditData({...editData,genero:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12 }}>
-                                    <option value="M">M</option><option value="F">F</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Fecha Nacimiento</label>
-                                  <input type="date" value={editData.fechaNac||""} onChange={ev=>setEditData({...editData,fechaNac:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Documento</label>
-                                  <input value={editData.documento||""} onChange={ev=>setEditData({...editData,documento:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>PERID</label>
-                                  <input value={editData.perid||""} onChange={ev=>setEditData({...editData,perid:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Teléfono</label>
-                                  <input value={editData.telefono||""} onChange={ev=>setEditData({...editData,telefono:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Ruta</label>
-                                  <input value={editData.ruta||""} onChange={ev=>setEditData({...editData,ruta:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Transportador</label>
-                                  <input value={editData.transportador||""} onChange={ev=>setEditData({...editData,transportador:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, boxSizing:"border-box" }}/>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:2 }}>Estado SIMAT</label>
-                                  <select value={editData.simat||"NO REGISTRADO"} onChange={ev=>setEditData({...editData,simat:ev.target.value})}
-                                    style={{ width:"100%", padding:"6px 9px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12 }}>
-                                    {SIMAT_ESTADOS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
-                                  </select>
-                                </div>
-                              </div>
-                              <div style={{ display:"flex", gap:8 }}>
-                                <button onClick={saveEdit}
-                                  style={{ padding:"6px 16px", borderRadius:6, background:"#1565c0", color:"#fff", fontWeight:700, fontSize:12, border:"none", cursor:"pointer" }}>
-                                  💾 Guardar
-                                </button>
-                                <button onClick={cancelEdit}
-                                  style={{ padding:"6px 14px", borderRadius:6, background:"#e9ecef", color:"#374151", fontWeight:600, fontSize:12, border:"none", cursor:"pointer" }}>
-                                  Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            /* MODO VISTA */
-                            <div style={{ padding:"7px 12px", fontSize:12, borderBottom:"1px solid #f0f4f8",
-                              background:i%2===0?"#fff":"#f9fbff", display:"flex", gap:8, alignItems:"center" }}>
-                              <span style={{ color:"#9ca3af", minWidth:24 }}>{i+1}</span>
-                              <span style={{ flex:1, fontWeight:500 }}>{e.nombre}</span>
-                              <span style={{ color:"#6b7280", minWidth:16 }}>{e.genero}</span>
-                              {e.fechaNac && <span style={{ color:"#6b7280", fontSize:11 }}>🎂 {e.fechaNac}</span>}
-                              {e.ruta && <span style={{ color:"#1565c0", fontSize:11 }}>🚌 {e.ruta}</span>}
-                              <button onClick={()=>startEdit(i)}
-                                style={{ padding:"3px 10px", borderRadius:5, background:"#e8edf5", border:"none", cursor:"pointer", fontSize:11, color:"#1565c0", fontWeight:600 }}>
-                                ✏️
-                              </button>
-                              <button onClick={()=>deleteEst(i)}
-                                style={{ padding:"3px 10px", borderRadius:5, background:"#f8d7da", border:"none", cursor:"pointer", fontSize:11, color:"#721c24", fontWeight:600 }}>
-                                🗑️
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+              {/* Preview lista del grado seleccionado */}
+              {nuevoEst.grado && datosEscuela[nuevoEst.grado] && (
+                <div style={{ marginTop:20 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:"#374151", marginBottom:8 }}>
+                    Estudiantes en {nuevoEst.grado} ({datosEscuela[nuevoEst.grado].estudiantes.length}):
                   </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {subTab === "tipos" && (()=>{
-            const [filas, setFilas] = React.useState(()=>{
-              const g = GRADOS_ORDEN.filter(gr=>datosEscuela[gr]);
-              return g.length > 0
-                ? g.map(gr=>({ grado: gr, tutor: datosEscuela[gr]?.tutor||"" }))
-                : [{ grado:"", tutor:"" }];
-            });
-            const [tiposMsg, setTiposMsg] = React.useState("");
-
-            function addFila() { setFilas([...filas, { grado:"", tutor:"" }]); }
-            function removeFila(i) { setFilas(filas.filter((_,idx)=>idx!==i)); }
-            function updateFila(i, field, val) {
-              const copy = filas.map((f,idx)=>idx===i?{...f,[field]:val}:f);
-              setFilas(copy);
-            }
-            function guardarTipos() {
-              const invalidas = filas.filter(f=>!f.grado.trim());
-              if (invalidas.length) { setTiposMsg("⚠️ Hay filas sin nombre de grado"); return; }
-              const updated = JSON.parse(JSON.stringify(datosEscuela));
-              // Update tutores for existing grades
-              filas.forEach(f=>{
-                const g = f.grado.trim();
-                if (!updated[g]) updated[g] = { tutor: f.tutor.trim(), estudiantes:[] };
-                else updated[g].tutor = f.tutor.trim();
-              });
-              // Add new grades that don't exist
-              saveStorage(DATA_KEY, updated);
-              onDataUpdate(updated);
-              setTiposMsg("✅ Grados y tutores guardados correctamente");
-              setTimeout(()=>setTiposMsg(""), 3000);
-            }
-
-            return (
-              <div>
-                <div style={{ fontSize:13, color:"#6b7280", marginBottom:12 }}>
-                  Gestiona los grados y directores de grupo. Los cambios se reflejan inmediatamente en todos los formatos.
-                </div>
-                {tiposMsg && (
-                  <div style={{ padding:"8px 12px", borderRadius:8, marginBottom:12, fontSize:13, fontWeight:600,
-                    background: tiposMsg.startsWith("✅")?"#d4edda":"#fff3cd",
-                    color: tiposMsg.startsWith("✅")?"#1e7e34":"#856404" }}>{tiposMsg}</div>
-                )}
-                {/* Tabla editable */}
-                <div style={{ border:"1px solid #e9ecf0", borderRadius:10, overflow:"hidden", marginBottom:12 }}>
-                  <div style={{ background:"#1565c0", color:"#fff", padding:"8px 14px", display:"grid", gridTemplateColumns:"40px 1fr 1fr 40px", gap:8, fontSize:12, fontWeight:700 }}>
-                    <span>#</span><span>Grado</span><span>Director(a) de Grupo</span><span></span>
-                  </div>
-                  <div style={{ maxHeight:380, overflowY:"auto" }}>
-                    {filas.map((f,i)=>(
-                      <div key={i} style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 40px", gap:8, padding:"6px 10px",
-                        background: i%2===0?"#fff":"#f9fbff", borderBottom:"1px solid #f0f4f8", alignItems:"center" }}>
-                        <span style={{ fontSize:12, color:"#9ca3af", textAlign:"center" }}>{i+1}</span>
-                        <input value={f.grado} onChange={e=>updateFila(i,"grado",e.target.value)}
-                          placeholder="ej: Primero A"
-                          style={{ padding:"5px 8px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, width:"100%", boxSizing:"border-box" }}/>
-                        <input value={f.tutor} onChange={e=>updateFila(i,"tutor",e.target.value)}
-                          placeholder="ej: MARIA GARCIA LOPEZ"
-                          style={{ padding:"5px 8px", borderRadius:6, border:"1.5px solid #ddd", fontSize:12, width:"100%", boxSizing:"border-box" }}/>
-                        <button onClick={()=>removeFila(i)}
-                          style={{ background:"#f8d7da", border:"none", borderRadius:6, color:"#721c24", fontWeight:700, cursor:"pointer", fontSize:14, padding:"4px 8px" }}>✕</button>
+                  <div style={{ maxHeight:180, overflowY:"auto", border:"1px solid #e9ecf0", borderRadius:8 }}>
+                    {datosEscuela[nuevoEst.grado].estudiantes.map((e,i)=>(
+                      <div key={i} style={{ padding:"6px 12px", fontSize:12, borderBottom:"1px solid #f0f4f8",
+                        background:i%2===0?"#fff":"#f9fbff", display:"flex", gap:8 }}>
+                        <span style={{ color:"#9ca3af", minWidth:24 }}>{i+1}</span>
+                        <span style={{ flex:1 }}>{e.nombre}</span>
+                        <span style={{ color:"#6b7280" }}>{e.genero}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div style={{ display:"flex", gap:10 }}>
-                  <button onClick={addFila}
-                    style={{ padding:"8px 18px", borderRadius:8, background:"#e9ecef", color:"#374151", fontWeight:600, fontSize:13, border:"1.5px solid #d1d5db", cursor:"pointer" }}>
-                    ➕ Agregar grado
-                  </button>
-                  <button onClick={guardarTipos}
-                    style={{ padding:"8px 24px", borderRadius:8, background:"#1565c0", color:"#fff", fontWeight:700, fontSize:13, border:"none", cursor:"pointer" }}>
-                    💾 Guardar cambios
-                  </button>
-                </div>
-                <div style={{ marginTop:12, fontSize:11, color:"#9ca3af" }}>
-                  <b>Nota:</b> El nombre del grado debe coincidir exactamente con el campo GRADO del SIMAT (mayúsculas, tildes y espacios).
-                </div>
-              </div>
-            );
-          })()}
-
-          {subTab === "borrar" && (
-            <div>
-              <div style={{ background:"#fff5f5", border:"2px solid #dc354530", borderRadius:12, padding:24, textAlign:"center" }}>
-                <div style={{ fontSize:48, marginBottom:8 }}>⚠️</div>
-                <div style={{ fontWeight:700, fontSize:16, color:"#721c24", marginBottom:8 }}>Borrar Base de Datos</div>
-                <div style={{ fontSize:13, color:"#6b7280", marginBottom:20, lineHeight:1.6 }}>
-                  Esta acción eliminará <strong>todos los estados de comisión, asistencia, notas y entregas</strong> registrados.<br/>
-                  Los datos de estudiantes del SIMAT se mantendrán.<br/>
-                  <strong>Esta acción no se puede deshacer.</strong>
-                </div>
-                {!confirmarBorrar ? (
-                  <button onClick={()=>setConfirmarBorrar(true)}
-                    style={{ padding:"10px 28px", borderRadius:8, background:"#dc3545", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
-                    🗑️ Borrar todos los datos
-                  </button>
-                ) : (
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:600, color:"#721c24", marginBottom:12 }}>
-                      ¿Estás seguro? Esta acción es irreversible.
-                    </div>
-                    <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
-                      <button onClick={borrarBaseDatos}
-                        style={{ padding:"10px 24px", borderRadius:8, background:"#dc3545", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
-                        ✅ Sí, borrar todo
-                      </button>
-                      <button onClick={()=>setConfirmarBorrar(false)}
-                        style={{ padding:"10px 24px", borderRadius:8, background:"#e9ecef", color:"#374151", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>
-                        ❌ Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
 
@@ -824,8 +399,6 @@ export default function App() {
   function getNota(idx,p,s)     { return appState?.[gradoSel]?.notas?.[idx]?.[p]?.[s]??""; }
   function setNota(idx,per,sab,v){ update(p=>{ if(!p[gradoSel])p[gradoSel]={}; if(!p[gradoSel].notas)p[gradoSel].notas={}; if(!p[gradoSel].notas[idx])p[gradoSel].notas[idx]={}; if(!p[gradoSel].notas[idx][per])p[gradoSel].notas[idx][per]={}; p[gradoSel].notas[idx][per][sab]=v; return p; }); }
   function getEntrega(idx)      { return appState?.[gradoSel]?.entregas?.[idx]??false; }
-  function getSimat(idx)        { return appState?.[gradoSel]?.simat?.[idx] ?? estudiantes[idx]?.simat ?? "NO REGISTRADO"; }
-  function setSimat(idx, val)   { update(p=>{ if(!p[gradoSel])p[gradoSel]={}; if(!p[gradoSel].simat)p[gradoSel].simat={}; p[gradoSel].simat[idx]=val; return p; }); }
   function toggleEntrega(idx)   { update(p=>{ if(!p[gradoSel])p[gradoSel]={}; if(!p[gradoSel].entregas)p[gradoSel].entregas={}; p[gradoSel].entregas[idx]=!p[gradoSel].entregas[idx]; return p; }); }
   function calcProm(idx,per)    { const v=SABERES.map(s=>parseFloat(getNota(idx,per,s))).filter(n=>!isNaN(n)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):""; }
   function calcPromGeneral(idx) { const v=PERIODOS.flatMap(p=>SABERES.map(s=>parseFloat(getNota(idx,p,s)))).filter(n=>!isNaN(n)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):""; }
@@ -970,8 +543,7 @@ export default function App() {
           {key:"asistencia", label:"📅 Asistencia y Notas", adminOnly: true},
           {key:"entregas",   label:"📦 Entrega de Informes", adminOnly: true},
           {key:"consolidado",label:"📊 Consolidado Final"},
-          {key:"reportes",    label:"📈 Reportes", adminOnly:true, coordOk:true},
-        ].filter(t => !t.adminOnly || isAdmin || (isCoord && t.coordOk)).map(t=>(
+        ].filter(t => !t.adminOnly || isAdmin || isCoord).map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             style={{ padding:"12px 18px", border:"none", background:"none", cursor:"pointer",
               fontWeight:tab===t.key?700:400, fontSize:13,
@@ -1014,7 +586,6 @@ export default function App() {
                     <th style={th}>Gén.</th>
                     <th style={{...th,minWidth:180}}>Estado Comisión</th>
                     {ESTADOS.slice(1).map(e=><th key={e.key} style={{...th,fontSize:10,maxWidth:60,lineHeight:1.2}}>{e.label}</th>)}
-                    {isAdmin && <th style={{...th,minWidth:140,fontSize:10,background:"#1e3a5f",color:"#fff"}}>Estado SIMAT</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1037,18 +608,6 @@ export default function App() {
                             {estado===e.key?<span style={{fontSize:16}}>✓</span>:<span style={{color:"#d1d5db"}}>–</span>}
                           </td>
                         ))}
-                        {isAdmin && (()=>{
-                          const sv=getSimat(i), si=SIMAT_ESTADOS.find(s=>s.key===sv)||SIMAT_ESTADOS[2];
-                          return(
-                            <td style={{...td}}>
-                              <select value={sv} onChange={e=>setSimat(i,e.target.value)}
-                                style={{width:"100%",padding:"5px 8px",borderRadius:6,fontSize:11,fontWeight:600,
-                                  border:`1.5px solid ${si.color}40`,background:si.bg,color:si.color,cursor:"pointer"}}>
-                                {SIMAT_ESTADOS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
-                              </select>
-                            </td>
-                          );
-                        })()}
                       </tr>
                     );
                   })}
@@ -1255,386 +814,6 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          );
-        })()}
-
-
-
-        {/* ══════════════ REPORTES ══════════════ */}
-        {tab === "reportes" && (isAdmin || isCoord) && (()=>{
-          // ── Aggregate all data ──────────────────────────────────────────
-          const [filtroGrado, setFiltroGrado] = React.useState("TODOS");
-          const [filtroEstado, setFiltroEstado] = React.useState("TODOS");
-          const [filtroSimat, setFiltroSimat] = React.useState("TODOS");
-          const [filtroRuta, setFiltroRuta] = React.useState("TODOS");
-          const [vistaReporte, setVistaReporte] = React.useState("dashboard");
-
-          const todosEst = GRADOS_ORDEN.filter(g=>datosEscuela[g]).flatMap(grado => {
-            const ests = datosEscuela[grado].estudiantes;
-            const st = appState?.[grado]?.comisiones || {};
-            return ests.map((est, i) => ({
-              ...est,
-              grado,
-              tutor: datosEscuela[grado].tutor,
-              estadoComision: st[i]?.estado || est.estado || "MATRICULADO",
-            }));
-          });
-
-          // Filtered list
-          const estFiltrados = todosEst.filter(e => {
-            if (filtroGrado !== "TODOS" && e.grado !== filtroGrado) return false;
-            if (filtroEstado !== "TODOS" && e.estadoComision !== filtroEstado) return false;
-            if (filtroSimat !== "TODOS" && (e.simat||"NO REGISTRADO") !== filtroSimat) return false;
-            if (filtroRuta !== "TODOS") {
-              if (filtroRuta === "CON RUTA" && !e.ruta) return false;
-              if (filtroRuta === "SIN RUTA" && e.ruta) return false;
-            }
-            return true;
-          });
-
-          const total = todosEst.length;
-          const totalF = estFiltrados.length;
-
-          // Counts
-          const porEstado = {};
-          ESTADOS.forEach(e => { porEstado[e.key] = todosEst.filter(x=>x.estadoComision===e.key).length; });
-
-          const porGenero = { M: todosEst.filter(e=>e.genero!=="F").length, F: todosEst.filter(e=>e.genero==="F").length };
-          const conRuta = todosEst.filter(e=>e.ruta).length;
-          const sinRuta = total - conRuta;
-
-          const porSimat = {};
-          SIMAT_ESTADOS.forEach(s => { porSimat[s.key] = todosEst.filter(e=>(e.simat||"NO REGISTRADO")===s.key).length; });
-
-          // Rutas únicas
-          const rutasUnicas = [...new Set(todosEst.filter(e=>e.ruta).map(e=>e.ruta))].sort();
-
-          // Porcentaje helper
-          const pct = (n, d) => d === 0 ? "0%" : (n/d*100).toFixed(1) + "%";
-
-          // Mini bar chart
-          function BarChart({ data, colorFn }) {
-            const max = Math.max(...data.map(d=>d.val), 1);
-            return (
-              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                {data.map((d,i) => (
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <div style={{ fontSize:11, color:"#374151", minWidth:160, textAlign:"right" }}>{d.label}</div>
-                    <div style={{ flex:1, background:"#f0f4f8", borderRadius:4, height:22, position:"relative" }}>
-                      <div style={{ width: (d.val/max*100)+"%", background:colorFn(d,i), height:"100%", borderRadius:4, transition:"width .4s", minWidth: d.val>0?8:0 }}/>
-                      <span style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", fontSize:11, fontWeight:700, color:"#fff", mixBlendMode:"difference" }}>
-                        {d.val} ({pct(d.val,total)})
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          }
-
-          // Donut chart SVG
-          function DonutChart({ segments, size=140 }) {
-            const r = 50, cx = 70, cy = 70, stroke = 22;
-            const circ = 2 * Math.PI * r;
-            let offset = 0;
-            const tot = segments.reduce((a,b)=>a+b.val,0) || 1;
-            return (
-              <svg width={size} height={size} viewBox="0 0 140 140">
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f0f4f8" strokeWidth={stroke}/>
-                {segments.filter(s=>s.val>0).map((s,i) => {
-                  const dash = (s.val/tot)*circ;
-                  const gap = circ - dash;
-                  const el = (
-                    <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-                      stroke={"#"+s.color} strokeWidth={stroke}
-                      strokeDasharray={`${dash} ${gap}`}
-                      strokeDashoffset={-offset}
-                      style={{ transform:"rotate(-90deg)", transformOrigin:"70px 70px" }}/>
-                  );
-                  offset += dash;
-                  return el;
-                })}
-                <text x={cx} y={cy-6} textAnchor="middle" fontSize="18" fontWeight="bold" fill="#1e3a5f">{tot}</text>
-                <text x={cx} y={cy+12} textAnchor="middle" fontSize="9" fill="#6b7280">TOTAL</text>
-              </svg>
-            );
-          }
-
-          return (
-            <div>
-              {/* Sub-nav */}
-              <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-                {[["dashboard","📊 Dashboard"],["tabla","📋 Tabla detallada"],["ruta","🚌 Rutas"]].map(([k,l])=>(
-                  <button key={k} onClick={()=>setVistaReporte(k)}
-                    style={{ padding:"7px 16px", borderRadius:8, border:"none", cursor:"pointer", fontSize:13, fontWeight:vistaReporte===k?700:500,
-                      background:vistaReporte===k?"#1565c0":"#e8edf5", color:vistaReporte===k?"#fff":"#374151" }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-
-              {/* ── DASHBOARD ── */}
-              {vistaReporte === "dashboard" && (
-                <div>
-                  {/* KPI cards */}
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:12, marginBottom:24 }}>
-                    <div style={{ background:"linear-gradient(135deg,#1565c0,#0d47a1)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{total}</div>
-                      <div style={{ fontSize:11, opacity:.85, marginTop:2 }}>TOTAL ESTUDIANTES</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#1e7e34,#155724)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{porEstado["MATRICULADO"]||0}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>MATRICULADOS</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct(porEstado["MATRICULADO"]||0,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#004085,#002752)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{porEstado["PROMOVIDO"]||0}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>PROMOVIDOS</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct(porEstado["PROMOVIDO"]||0,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#721c24,#4e1217)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{porEstado["RETIRADO"]||0}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>RETIRADOS</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct(porEstado["RETIRADO"]||0,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#856404,#533f03)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{porEstado["REPROBADO"]||0}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>REPROBADOS</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct(porEstado["REPROBADO"]||0,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#5a1e6b,#3b1247)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{(porEstado["COMPROMISO CONVIVENCIAL"]||0)+(porEstado["COMPROMISO ACADEMICO"]||0)}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>EN COMPROMISO</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct((porEstado["COMPROMISO CONVIVENCIAL"]||0)+(porEstado["COMPROMISO ACADEMICO"]||0),total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#495057,#212529)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{porEstado["CONTINUIDAD"]||0}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>CONTINUIDAD</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct(porEstado["CONTINUIDAD"]||0,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#c01565,#7a0d41)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{conRuta}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>CON RUTA</div>
-                      <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{pct(conRuta,total)}</div>
-                    </div>
-                  </div>
-
-                  {/* Charts row */}
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 }}>
-                    {/* Estado comisión bar */}
-                    <div style={{ background:"#fff", borderRadius:12, padding:18, boxShadow:"0 1px 6px rgba(0,0,0,.08)" }}>
-                      <div style={{ fontWeight:700, fontSize:13, color:"#1e3a5f", marginBottom:14 }}>📊 Estudiantes por Estado de Comisión</div>
-                      <BarChart
-                        data={ESTADOS.map(e=>({ label:e.label, val:porEstado[e.key]||0, color:e.color, bg:e.bg }))}
-                        colorFn={(d)=>d.color}
-                      />
-                    </div>
-
-                    {/* Donut género + SIMAT */}
-                    <div style={{ background:"#fff", borderRadius:12, padding:18, boxShadow:"0 1px 6px rgba(0,0,0,.08)" }}>
-                      <div style={{ fontWeight:700, fontSize:13, color:"#1e3a5f", marginBottom:14 }}>🧑‍🎓 Distribución por Género</div>
-                      <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-                        <DonutChart segments={[{val:porGenero.M,color:"1565c0"},{val:porGenero.F,color:"c01565"}]}/>
-                        <div>
-                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                            <div style={{ width:14, height:14, borderRadius:3, background:"#1565c0" }}/>
-                            <span style={{ fontSize:13 }}>Hombres: <b>{porGenero.M}</b> ({pct(porGenero.M,total)})</span>
-                          </div>
-                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                            <div style={{ width:14, height:14, borderRadius:3, background:"#c01565" }}/>
-                            <span style={{ fontSize:13 }}>Mujeres: <b>{porGenero.F}</b> ({pct(porGenero.F,total)})</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ fontWeight:700, fontSize:13, color:"#1e3a5f", marginTop:18, marginBottom:10 }}>📋 Estado SIMAT</div>
-                      <BarChart
-                        data={SIMAT_ESTADOS.map(s=>({ label:s.label, val:porSimat[s.key]||0, color:s.color }))}
-                        colorFn={(d)=>d.color}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Retirados detail */}
-                  {(porEstado["RETIRADO"]||0) > 0 && (
-                    <div style={{ background:"#fff", borderRadius:12, padding:18, boxShadow:"0 1px 6px rgba(0,0,0,.08)", marginBottom:16 }}>
-                      <div style={{ fontWeight:700, fontSize:13, color:"#721c24", marginBottom:12 }}>🚨 Estudiantes Retirados ({porEstado["RETIRADO"]})</div>
-                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                        <thead><tr style={{ background:"#f8d7da" }}>
-                          <th style={th}>#</th>
-                          <th style={{...th,textAlign:"left"}}>Nombre</th>
-                          <th style={th}>Grado</th>
-                          <th style={{...th,textAlign:"left"}}>Tutor</th>
-                          <th style={th}>Género</th>
-                        </tr></thead>
-                        <tbody>
-                          {todosEst.filter(e=>e.estadoComision==="RETIRADO").map((e,i)=>(
-                            <tr key={i} style={{ borderBottom:"1px solid #f0f4f8", background:i%2===0?"#fff":"#fff5f5" }}>
-                              <td style={{...td,textAlign:"center",color:"#9ca3af"}}>{i+1}</td>
-                              <td style={{...td,color:"#721c24",fontWeight:500,textDecoration:"line-through"}}>{e.nombre}</td>
-                              <td style={{...td,textAlign:"center"}}>{e.grado}</td>
-                              <td style={td}>{e.tutor}</td>
-                              <td style={{...td,textAlign:"center"}}>{e.genero}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* Por grado bar */}
-                  <div style={{ background:"#fff", borderRadius:12, padding:18, boxShadow:"0 1px 6px rgba(0,0,0,.08)" }}>
-                    <div style={{ fontWeight:700, fontSize:13, color:"#1e3a5f", marginBottom:14 }}>🏫 Estudiantes por Grado</div>
-                    <BarChart
-                      data={GRADOS_ORDEN.filter(g=>datosEscuela[g]).map(g=>({
-                        label:g, val:datosEscuela[g].estudiantes.length, color:"#1565c0"
-                      }))}
-                      colorFn={()=>"#1565c0"}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ── TABLA DETALLADA ── */}
-              {vistaReporte === "tabla" && (
-                <div>
-                  {/* Filtros */}
-                  <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 1px 6px rgba(0,0,0,.08)", display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-end" }}>
-                    <div>
-                      <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Grado</label>
-                      <select value={filtroGrado} onChange={e=>setFiltroGrado(e.target.value)}
-                        style={{ padding:"6px 12px", borderRadius:7, border:"1.5px solid #ddd", fontSize:12 }}>
-                        <option value="TODOS">Todos los grados</option>
-                        {GRADOS_ORDEN.filter(g=>datosEscuela[g]).map(g=><option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Estado Comisión</label>
-                      <select value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)}
-                        style={{ padding:"6px 12px", borderRadius:7, border:"1.5px solid #ddd", fontSize:12 }}>
-                        <option value="TODOS">Todos</option>
-                        {ESTADOS.map(e=><option key={e.key} value={e.key}>{e.label}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Estado SIMAT</label>
-                      <select value={filtroSimat} onChange={e=>setFiltroSimat(e.target.value)}
-                        style={{ padding:"6px 12px", borderRadius:7, border:"1.5px solid #ddd", fontSize:12 }}>
-                        <option value="TODOS">Todos</option>
-                        {SIMAT_ESTADOS.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize:11, fontWeight:600, color:"#374151", display:"block", marginBottom:3 }}>Ruta</label>
-                      <select value={filtroRuta} onChange={e=>setFiltroRuta(e.target.value)}
-                        style={{ padding:"6px 12px", borderRadius:7, border:"1.5px solid #ddd", fontSize:12 }}>
-                        <option value="TODOS">Todos</option>
-                        <option value="CON RUTA">Con ruta</option>
-                        <option value="SIN RUTA">Sin ruta</option>
-                      </select>
-                    </div>
-                    <div style={{ marginLeft:"auto", fontSize:13, fontWeight:600, color:"#1565c0", alignSelf:"center" }}>
-                      {totalF} de {total} estudiantes
-                    </div>
-                  </div>
-
-                  <div style={{ background:"#fff", borderRadius:12, overflow:"auto", boxShadow:"0 1px 6px rgba(0,0,0,.08)" }}>
-                    <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                      <thead><tr style={{ background:"#1565c0", color:"#fff" }}>
-                        <th style={{...th,color:"#fff"}}>#</th>
-                        <th style={{...th,textAlign:"left",color:"#fff",minWidth:180}}>Apellidos y Nombres</th>
-                        <th style={{...th,color:"#fff"}}>Grado</th>
-                        <th style={{...th,color:"#fff"}}>Gén.</th>
-                        <th style={{...th,color:"#fff",minWidth:140}}>Estado Comisión</th>
-                        <th style={{...th,color:"#fff"}}>SIMAT</th>
-                        <th style={{...th,color:"#fff"}}>Ruta</th>
-                        <th style={{...th,color:"#fff"}}>Transportador</th>
-                        <th style={{...th,color:"#fff"}}>F. Nacimiento</th>
-                      </tr></thead>
-                      <tbody>
-                        {estFiltrados.map((e,i)=>{
-                          const info=estadoInfo(e.estadoComision);
-                          const si=SIMAT_ESTADOS.find(s=>s.key===(e.simat||"NO REGISTRADO"))||SIMAT_ESTADOS[2];
-                          return(
-                            <tr key={i} style={{ background:i%2===0?"#fff":"#f9fbff", borderBottom:"1px solid #e9ecf0" }}>
-                              <td style={{...td,textAlign:"center",color:"#9ca3af"}}>{i+1}</td>
-                              <td style={{...td,fontWeight:500}}>{e.nombre}</td>
-                              <td style={{...td,textAlign:"center",fontSize:11}}>{e.grado}</td>
-                              <td style={{...td,textAlign:"center"}}>{e.genero}</td>
-                              <td style={td}><span style={{ background:info.bg,color:info.color,padding:"2px 8px",borderRadius:5,fontSize:11,fontWeight:600 }}>{info.label}</span></td>
-                              <td style={td}><span style={{ background:si.bg,color:si.color,padding:"2px 8px",borderRadius:5,fontSize:11,fontWeight:600 }}>{si.label}</span></td>
-                              <td style={{...td,fontSize:11}}>{e.ruta||<span style={{color:"#d1d5db"}}>–</span>}</td>
-                              <td style={{...td,fontSize:11}}>{e.transportador||<span style={{color:"#d1d5db"}}>–</span>}</td>
-                              <td style={{...td,textAlign:"center",fontSize:11}}>{e.fechaNac||<span style={{color:"#d1d5db"}}>–</span>}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* ── RUTAS ── */}
-              {vistaReporte === "ruta" && (
-                <div>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
-                    <div style={{ background:"linear-gradient(135deg,#c01565,#7a0d41)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{conRuta}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>CON RUTA</div>
-                      <div style={{ fontSize:12, fontWeight:700 }}>{pct(conRuta,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#495057,#212529)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{sinRuta}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>SIN RUTA</div>
-                      <div style={{ fontSize:12, fontWeight:700 }}>{pct(sinRuta,total)}</div>
-                    </div>
-                    <div style={{ background:"linear-gradient(135deg,#1565c0,#0d47a1)", borderRadius:12, padding:"16px 14px", textAlign:"center", color:"#fff" }}>
-                      <div style={{ fontSize:34, fontWeight:800 }}>{rutasUnicas.length}</div>
-                      <div style={{ fontSize:11, opacity:.85 }}>RUTAS DISTINTAS</div>
-                    </div>
-                  </div>
-
-                  {rutasUnicas.map(ruta => {
-                    const ests = todosEst.filter(e=>e.ruta===ruta);
-                    const transportadores = [...new Set(ests.map(e=>e.transportador).filter(Boolean))];
-                    return (
-                      <div key={ruta} style={{ background:"#fff", borderRadius:12, marginBottom:12, overflow:"hidden", boxShadow:"0 1px 6px rgba(0,0,0,.08)" }}>
-                        <div style={{ background:"#c01565", color:"#fff", padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                          <span style={{ fontWeight:700, fontSize:13 }}>🚌 {ruta}</span>
-                          <span style={{ fontSize:12 }}>{ests.length} estudiantes · {transportadores.join(", ")||"Sin transportador"}</span>
-                        </div>
-                        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                          <thead><tr style={{ background:"#f9f0f5" }}>
-                            <th style={th}>#</th>
-                            <th style={{...th,textAlign:"left"}}>Nombre</th>
-                            <th style={th}>Grado</th>
-                            <th style={th}>Gén.</th>
-                            <th style={th}>Transportador</th>
-                          </tr></thead>
-                          <tbody>
-                            {ests.map((e,i)=>(
-                              <tr key={i} style={{ borderBottom:"1px solid #f0f4f8", background:i%2===0?"#fff":"#fdf8fb" }}>
-                                <td style={{...td,textAlign:"center",color:"#9ca3af"}}>{i+1}</td>
-                                <td style={{...td,fontWeight:500}}>{e.nombre}</td>
-                                <td style={{...td,textAlign:"center",fontSize:11}}>{e.grado}</td>
-                                <td style={{...td,textAlign:"center"}}>{e.genero}</td>
-                                <td style={{...td,fontSize:11}}>{e.transportador||"–"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })}
-                  {rutasUnicas.length === 0 && (
-                    <div style={{ background:"#fff", borderRadius:12, padding:32, textAlign:"center", color:"#9ca3af", fontSize:13 }}>
-                      No hay estudiantes con ruta asignada aún.
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           );
         })()}
