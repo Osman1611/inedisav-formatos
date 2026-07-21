@@ -192,16 +192,16 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate}){
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{background:"#fff",borderRadius:16,width:"min(760px,96vw)",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
+      <div style={{background:"#fff",borderRadius:16,width:"min(960px,99vw)",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
         <div style={{background:"#1565c0",color:"#fff",padding:"14px 20px",borderRadius:"16px 16px 0 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontWeight:700,fontSize:15}}>⚙️ Panel de Administración</span>
           <button onClick={onClose} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{display:"flex",borderBottom:"2px solid #e3e8f0",padding:"0 16px",overflowX:"auto"}}>
+        <div style={{display:"flex",borderBottom:"2px solid #e3e8f0",padding:"0 8px",overflowX:"auto",gap:2}}>
           {TABS.map(([k,l])=>(
             <button key={k} onClick={()=>setSubTab(k)}
-              style={{padding:"10px 14px",border:"none",background:"none",cursor:"pointer",fontWeight:subTab===k?700:400,whiteSpace:"nowrap",
-                color:subTab===k?"#1565c0":"#6b7280",borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent",marginBottom:-2,fontSize:12}}>
+              style={{padding:"8px 10px",border:"none",background:"none",cursor:"pointer",fontWeight:subTab===k?700:400,whiteSpace:"nowrap",
+                color:subTab===k?"#1565c0":"#6b7280",borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent",marginBottom:-2,fontSize:11}}>
               {l}
             </button>
           ))}
