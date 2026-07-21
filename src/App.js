@@ -205,11 +205,12 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate}){
           <span style={{fontWeight:700,fontSize:15}}>⚙️ Panel de Administración</span>
           <button onClick={onClose} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{display:"flex",borderBottom:"2px solid #e3e8f0",padding:"0 8px",overflowX:"auto",gap:2}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderBottom:"2px solid #e3e8f0"}}>
           {ADMIN_TABS.map(([k,l])=>(
             <button key={k} onClick={()=>setSubTab(k)}
-              style={{padding:"8px 10px",border:"none",background:"none",cursor:"pointer",fontWeight:subTab===k?700:400,whiteSpace:"nowrap",
-                color:subTab===k?"#1565c0":"#6b7280",borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent",marginBottom:-2,fontSize:11}}>
+              style={{padding:"10px 6px",border:"none",borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent",
+                background:subTab===k?"#f0f4ff":"none",cursor:"pointer",fontWeight:subTab===k?700:500,
+                color:subTab===k?"#1565c0":"#6b7280",fontSize:11,textAlign:"center",lineHeight:1.3}}>
               {l}
             </button>
           ))}
