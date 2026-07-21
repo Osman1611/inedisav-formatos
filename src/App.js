@@ -909,9 +909,10 @@ export default function App(){
                 <tbody>
                   {estudiantes.map((est,i)=>{
                     const {p,f}=cntA(i);
-                    return(<tr key={i} style={{background:i%2===0?"#fff":"#f9fbff",borderBottom:"1px solid #e9ecf0"}}>
+                    const ret=getE(i)==="RETIRADO";
+                    return(<tr key={i} style={{background:ret?"#fff5f5":i%2===0?"#fff":"#f9fbff",borderBottom:"1px solid #e9ecf0"}}>
                       <td style={{...TD,textAlign:"center",color:"#9ca3af"}}>{i+1}</td>
-                      <td style={{...TD,fontWeight:500}}>{est.nombre}</td>
+                      <td style={{...TD,fontWeight:500,color:ret?"#dc3545":"inherit",textDecoration:ret?"line-through":"none"}}>{est.nombre}</td>
                       {SEMANAS.map(s=>DIAS.map((_,di)=>{
                         const v=getA(i,s,di.toString());
                         return(<td key={s+di} style={{...TD,textAlign:"center",padding:"2px 1px"}}>
@@ -968,9 +969,10 @@ export default function App(){
                 <tbody>
                   {estudiantes.map((est,i)=>{
                     const a=getEnt(i);
-                    return(<tr key={i} style={{background:a?"#f0fff4":i%2===0?"#fff":"#f9fbff",borderBottom:"1px solid #e9ecf0"}}>
+                    const retEnt=getE(i)==="RETIRADO";
+                    return(<tr key={i} style={{background:retEnt?"#fff5f5":a?"#f0fff4":i%2===0?"#fff":"#f9fbff",borderBottom:"1px solid #e9ecf0"}}>
                       <td style={{...TD,textAlign:"center",color:"#9ca3af"}}>{i+1}</td>
-                      <td style={{...TD,fontWeight:500}}>{est.nombre}</td>
+                      <td style={{...TD,fontWeight:500,color:retEnt?"#dc3545":"inherit",textDecoration:retEnt?"line-through":"none"}}>{est.nombre}</td>
                       <td style={{...TD,textAlign:"center",color:"#6b7280"}}>{est.genero}</td>
                       <td style={{...TD,textAlign:"center"}}>
                         <button onClick={()=>isAdmin&&togEnt(i)} disabled={!isAdmin}
@@ -1021,8 +1023,8 @@ export default function App(){
                   <tr style={{background:"#1e3a5f",color:"#fff"}}>
                     <th style={{...TH,textAlign:"left",minWidth:120,color:"#fff"}}>Grado</th>
                     <th style={{...TH,minWidth:160,textAlign:"left",color:"#fff"}}>Tutor(a)</th>
-                    <th style={{...TH,...colW,color:"#fff"}}>♂ H</th>
-                    <th style={{...TH,...colW,color:"#fff"}}>♀ M</th>
+                    <th style={{...TH,...colW,color:"#7dd3fc"}}>♂ H</th>
+                    <th style={{...TH,...colW,color:"#f9a8d4"}}>♀ M</th>
                     <th style={{...TH,...colW,color:"#fff"}}>Total</th>
                     {ESTADOS.map(e=><th key={e.key} colSpan={2} style={{...TH,fontSize:10,background:e.color,color:"#fff",minWidth:80}}>{e.label}</th>)}
                   </tr>
@@ -1039,8 +1041,8 @@ export default function App(){
                     <tr key={f.grado} style={{background:ri%2===0?"#fff":"#f9fbff",borderBottom:"1px solid #e9ecf0"}}>
                       <td style={{...TD,fontWeight:600,color:"#1e3a5f"}}>{f.grado}</td>
                       <td style={{...TD,fontSize:11}}>{f.tutor}</td>
-                      <td style={{...TD,textAlign:"center",fontWeight:600,color:"#1565c0"}}>{f.totalM}</td>
-                      <td style={{...TD,textAlign:"center",fontWeight:600,color:"#c01565"}}>{f.totalF}</td>
+                      <td style={{...TD,textAlign:"center",fontWeight:700,color:"#1565c0",fontSize:14}}>♂ {f.totalM}</td>
+                      <td style={{...TD,textAlign:"center",fontWeight:700,color:"#c01565",fontSize:14}}>♀ {f.totalF}</td>
                       <td style={{...TD,textAlign:"center",fontWeight:700}}>{f.total}</td>
                       {ESTADOS.map(e=>[
                         <td key={e.key+"m"} style={{...TD,textAlign:"center",background:f.counts[e.key].M>0?e.bg:"",color:e.color,fontWeight:f.counts[e.key].M>0?700:400}}>{f.counts[e.key].M||"–"}</td>,
