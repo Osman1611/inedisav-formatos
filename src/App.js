@@ -64,6 +64,14 @@ function Login({onLogin}){
 }
 
 // ══ ADMIN PANEL ════════════════════════════════════════════════════════
+const ADMIN_TABS=[
+  ["usuarios","👥 Usuarios"],
+  ["estudiantes","➕ Estudiantes"],
+  ["tipos","🏫 Grados/Tutores"],
+  ["simat","📂 Importar SIMAT"],
+  ["borrar","🗑️ Borrar BD"]
+];
+
 function AdminPanel({onClose,datosEscuela,onDataUpdate}){
   const [subTab,setSubTab]=useState("usuarios");
   const [usuarios,setUsuarios]=useState(()=>ls(UK,USUARIOS_INICIALES));
@@ -181,7 +189,7 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate}){
     ss(DK,upd);onDataUpdate(upd);setTiposMsg("✅ Guardado");setTimeout(()=>setTiposMsg(""),3000);
   }
 
-  const TABS=[["usuarios","👥 Usuarios"],["estudiantes","➕ Estudiantes"],["tipos","🏫 Grados/Tutores"],["simat","📂 Importar SIMAT"],["borrar","🗑️ Borrar BD"]];
+  // TABS defined at module level below
   const CAMPO=(label,val,onChange,type="text",placeholder="")=>(
     <div>
       <label style={{fontSize:11,fontWeight:600,color:"#374151",display:"block",marginBottom:3}}>{label}</label>
@@ -198,7 +206,7 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate}){
           <button onClick={onClose} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer"}}>✕</button>
         </div>
         <div style={{display:"flex",borderBottom:"2px solid #e3e8f0",padding:"0 8px",overflowX:"auto",gap:2}}>
-          {TABS.map(([k,l])=>(
+          {ADMIN_TABS.map(([k,l])=>(
             <button key={k} onClick={()=>setSubTab(k)}
               style={{padding:"8px 10px",border:"none",background:"none",cursor:"pointer",fontWeight:subTab===k?700:400,whiteSpace:"nowrap",
                 color:subTab===k?"#1565c0":"#6b7280",borderBottom:subTab===k?"3px solid #1565c0":"3px solid transparent",marginBottom:-2,fontSize:11}}>
