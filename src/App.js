@@ -93,7 +93,7 @@ const ADMIN_TABS=[
   ["borrar","🗑️ Borrar BD"]
 ];
 
-function AdminPanel({onClose,datosEscuela,onDataUpdate}){
+function AdminPanel({onClose,datosEscuela,onDataUpdate,onBorrar}){
   const [subTab,setSubTab]=useState("usuarios");
   const [usuarios,setUsuarios]=useState(()=>ls(UK,USUARIOS_INICIALES));
   useEffect(()=>{fbGet("usuarios",null).then(v=>{if(v)setUsuarios(v);});},[]);
@@ -123,7 +123,7 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate}){
     const upd={...usuarios,[username]:{...usuarios[username],password:newPass.trim()}};
     setUsuarios(upd);ss(UK,upd);fbSet("usuarios",upd);setEditUser(null);setNewPass("");setMsg("✅ Contraseña actualizada");setTimeout(()=>setMsg(""),2000);
   }
-  function borrarBD(){setAppState({});fbSet("appState",{});fbSet("datos",DATOS_INICIAL);setDatos(DATOS_INICIAL);window.location.reload();}
+  function borrarBD(){if(onBorrar)onBorrar();}
   function handleSIMAT(e){
     const file=e.target.files[0];if(!file)return;setSimatMsg("Procesando...");
     const reader=new FileReader();
@@ -809,7 +809,13 @@ export default function App(){
 
   return(
     <div style={{fontFamily:"'Segoe UI',sans-serif",minHeight:"100vh",background:"#f0f4f8"}}>
-      {showAdmin&&<AdminPanel onClose={()=>setShowAdmin(false)} datosEscuela={datos} onDataUpdate={d=>setDatos(d)}/>}
+      {showAdmin&&<AdminPanel onClose={()=>setShowAdmin(false)} datosEscuela={datos} onDataUpdate={d=>{setDatos(d);fbSet("datos",d);}} onBorrar={async()=>{
+  setDatos(DATOS_INICIAL);
+  setAppState({});
+  await Promise.all([fbSet("appState",{}),fbSet("datos",{})]);
+  setShowAdmin(false);
+  setTimeout(()=>window.location.reload(),500);
+}}/>}
 
       {/* HEADER */}
       <div style={{background:"linear-gradient(135deg,#0d47a1,#1565c0)",color:"#fff",padding:"12px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
