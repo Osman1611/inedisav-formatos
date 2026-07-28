@@ -8,13 +8,14 @@ const USUARIOS_INICIALES = {"admin":{"password":"admin2026","role":"admin","nomb
 const GRADOS_ORDEN = ["Jardin A", "Transicion A", "Primero A", "Primero B", "Segundo A", "Tercero A", "Cuarto A", "Cuarto B", "Quinto A", "Quinto B", "Sexto A", "Sexto B", "Sexto C", "Septimo A", "Septimo B", "Septimo C", "Octavo A", "Octavo B", "Noveno A", "Noveno B", "Decimo A", "Decimo B", "Undecimo A", "Undecimo B", "Undecimo C", "Ciclo 23 A", "Ciclo 24 A", "Ciclo 25 A"];
 
 const ESTADOS = [
-  {key:"MATRICULADO",         label:"Matriculado",         color:"#1e7e34",bg:"#d4edda"},
-  {key:"RETIRADO",            label:"Retirado",            color:"#721c24",bg:"#f8d7da"},
-  {key:"REPROBADO",           label:"Reprobado",           color:"#856404",bg:"#fff3cd"},
-  {key:"PROMOVIDO",           label:"Promovido",           color:"#004085",bg:"#cce5ff"},
-  {key:"COMPROMISO CONVIVENCIAL",label:"Comp. Convivencial",color:"#5a1e6b",bg:"#f3d9fa"},
-  {key:"COMPROMISO ACADEMICO",label:"Comp. Académico",     color:"#7c4a00",bg:"#ffe8cc"},
-  {key:"CONTINUIDAD",         label:"Continuidad",         color:"#495057",bg:"#e9ecef"},
+  {key:"MATRICULADO",label:"Matriculado",color:"#1e7e34",bg:"#d4edda"},
+  {key:"RETIRADO",   label:"Retirado",   color:"#721c24",bg:"#f8d7da"},
+  {key:"REPROBADO",  label:"Reprobado",  color:"#856404",bg:"#fff3cd"},
+  {key:"PROMOVIDO",  label:"Promovido",  color:"#004085",bg:"#cce5ff"},
+];
+const OBS_TIPOS=[
+  {key:"CONV",label:"Comp. Convivencial",color:"#5a1e6b",bg:"#f3d9fa"},
+  {key:"ACAD",label:"Comp. Académico",   color:"#7c4a00",bg:"#ffe8cc"},
 ];
 const SIMAT_ESTADOS = [
   {key:"REGISTRADO",    label:"Registrado",    color:"#1e7e34",bg:"#d4edda"},
@@ -135,21 +136,23 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate,onBorrar}){
         const tm={};tipos.forEach(r=>{if(r[17]&&r[18])tm[String(r[17]).trim()]=String(r[18]).trim();});
         const nd={};
         simat.forEach(r=>{
-          const grado=(r["GRADO"]||r["Grado"]||"").toString().trim();if(!grado)return;
+          const grado=(r["Grado"]||r["GRADO"]||r["grado"]||"").toString().trim();if(!grado)return;
           if(!nd[grado])nd[grado]={tutor:tm[grado]||"",estudiantes:[]};
           const nombre=(r["APELLIDOS_Y_NOMBRES"]||"").toString().trim();if(!nombre)return;
           let tel="";try{const t=parseInt(String(r["TELEFONO"]||"").replace(/[^0-9]/g,""));if(t>0)tel=String(t);}catch{}
+          const estadoRaw=(r["COMISION FINAL"]||"").toString().trim().toUpperCase();
+          const simatRaw=(r["ESTADO"]||r["SIMAT"]||"").toString().trim().toUpperCase();
           nd[grado].estudiantes.push({
             nombre,
             genero:(r["GENERO"]||"").toString().trim().toUpperCase(),
-            estado:(r["COMISION FINAL"]||"MATRICULADO").toString().trim().toUpperCase()||"MATRICULADO",
-            documento:(r["DOCUMENTO"]||"").toString().trim(),
-            perid:(r["PERID"]||"").toString().trim(),
-            simat:(r["SIMAT"]||"NO REGISTRADO").toString().trim().toUpperCase()||"NO REGISTRADO",
+            estado:estadoRaw&&estadoRaw!=="NAN"?estadoRaw:"MATRICULADO",
+            documento:(r["DOC"]||r["DOCUMENTO"]||"").toString().trim(),
+            perid:(r["PER_ID"]||r["PERID"]||"").toString().trim(),
+            simat:["REGISTRADO","NO LIBERADO","NO REGISTRADO"].includes(simatRaw)?simatRaw:"NO REGISTRADO",
             telefono:tel,
             ruta:(r["RUTA"]||"").toString().trim(),
-            transportador:(r["TRANSPORTADOR"]||"").toString().trim(),
-            fechaNac:(r["FECHA_NACIMIENTO"]||r["FECHA NACIMIENTO"]||"").toString().trim(),
+            transportador:(r["TRANSPORTISTA"]||r["TRANSPORTADOR"]||"").toString().trim(),
+            fechaNac:(r["FECHA_NACIMIENTO"]||"").toString().trim(),
           });
         });
         fbSet("datos",nd);onDataUpdate(nd);
@@ -727,6 +730,14 @@ export default function App(){
   const estudiantes=gradoData.estudiantes;
 
   function getE(i){return appState?.[gradoSel]?.comisiones?.[i]?.estado||estudiantes[i]?.estado||"MATRICULADO";}
+  function getObs(i){return appState?.[gradoSel]?.obs?.[i]||{};}
+  function setObs(i,key,val){update(p=>{
+    if(!p[gradoSel])p[gradoSel]={};
+    if(!p[gradoSel].obs)p[gradoSel].obs={};
+    if(!p[gradoSel].obs[i])p[gradoSel].obs[i]={};
+    p[gradoSel].obs[i][key]=val;
+    return p;
+  });}
   function setE(i,v){update(p=>{if(!p[gradoSel])p[gradoSel]={};if(!p[gradoSel].comisiones)p[gradoSel].comisiones={};if(!p[gradoSel].comisiones[i])p[gradoSel].comisiones[i]={};p[gradoSel].comisiones[i].estado=v;return p;});}
   function getA(i,s,d){return appState?.[gradoSel]?.asistencia?.[i]?.[s]?.[d]||"";}
   function togA(i,s,d){update(p=>{if(!p[gradoSel])p[gradoSel]={};if(!p[gradoSel].asistencia)p[gradoSel].asistencia={};if(!p[gradoSel].asistencia[i])p[gradoSel].asistencia[i]={};if(!p[gradoSel].asistencia[i][s])p[gradoSel].asistencia[i][s]={};const c=p[gradoSel].asistencia[i][s][d]||"";p[gradoSel].asistencia[i][s][d]=c==="P"?"F":c==="F"?"":"P";return p;});}
@@ -891,6 +902,7 @@ export default function App(){
                   <th style={TH}>Gén.</th>
                   <th style={{...TH,minWidth:180}}>Estado Comisión</th>
                   {ESTADOS.slice(1).map(e=><th key={e.key} style={{...TH,fontSize:10,maxWidth:60,lineHeight:1.2}}>{e.label}</th>)}
+                  <th style={{...TH,minWidth:160,fontSize:10,background:"#5a1e6b",color:"#fff"}}>Observaciones</th>
                   {isAdmin&&<th style={{...TH,minWidth:130,fontSize:10,background:"#1e3a5f",color:"#fff"}}>Estado SIMAT</th>}
                 </tr></thead>
                 <tbody>
@@ -912,6 +924,24 @@ export default function App(){
                           {ec===e.key?<span style={{fontSize:16}}>✓</span>:<span style={{color:"#d1d5db"}}>–</span>}
                         </td>
                       ))}
+                      {(()=>{
+                        const obs=getObs(i);
+                        return(<td style={{...TD,minWidth:160}}>
+                          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                            {OBS_TIPOS.map(o=>(
+                              <label key={o.key} style={{display:"flex",alignItems:"center",gap:3,cursor:isCoord?"default":"pointer",
+                                fontSize:10,padding:"2px 6px",borderRadius:5,
+                                background:obs[o.key]?o.bg:"#f0f4f8",color:obs[o.key]?o.color:"#9ca3af",
+                                fontWeight:obs[o.key]?700:400,border:`1px solid ${obs[o.key]?o.color+"40":"#e9ecf0"}`}}>
+                                <input type="checkbox" checked={!!obs[o.key]}
+                                  onChange={e=>!isCoord&&setObs(i,o.key,e.target.checked)}
+                                  style={{display:"none"}}/>
+                                {obs[o.key]?"✓ ":""}{o.label}
+                              </label>
+                            ))}
+                          </div>
+                        </td>);
+                      })()}
                       {isAdmin&&(()=>{const sv=getSimat(i),si=SIMAT_ESTADOS.find(s=>s.key===sv)||SIMAT_ESTADOS[2];return(
                         <td style={TD}>
                           <select value={sv} onChange={e=>setSimat(i,e.target.value)}
