@@ -490,7 +490,8 @@ function ReportesTab({datosEscuela,appState}){
   const [filtroRuta,setFR]=useState("TODOS");
   const [vista,setVista]=useState("dashboard");
 
-  const todos=GRADOS_ORDEN.filter(g=>datosEscuela[g]).flatMap(grado=>{
+  const todosGrados=Object.keys(datosEscuela||{});
+  const todos=todosGrados.flatMap(grado=>{
     const ests=datosEscuela[grado].estudiantes;
     const st=appState?.[grado]?.comisiones||{};
     return ests.map((e,i)=>({...e,grado,tutor:datosEscuela[grado].tutor,estadoComision:st[i]?.estado||e.estado||"MATRICULADO"}));
@@ -509,7 +510,7 @@ function ReportesTab({datosEscuela,appState}){
   const porGenero={M:todos.filter(e=>e.genero!=="F").length,F:todos.filter(e=>e.genero==="F").length};
   const conRuta=todos.filter(e=>e.ruta).length;
   const porSimat={};SIMAT_ESTADOS.forEach(s=>{porSimat[s.key]=todos.filter(e=>(e.simat||"NO REGISTRADO")===s.key).length;});
-  const rutasUnicas=[...new Set(todos.filter(e=>e.ruta).map(e=>e.ruta))].sort();
+  const rutasUnicas=[...new Set(todos.filter(e=>e.ruta&&e.ruta.trim()).map(e=>e.ruta.trim()))].sort();
 
   function BarChart({data}){
     const max=Math.max(...data.map(d=>d.val),1);
@@ -554,8 +555,8 @@ function ReportesTab({datosEscuela,appState}){
             <KPI val={porEstado["PROMOVIDO"]||0} label="PROMOVIDOS" pctVal={porEstado["PROMOVIDO"]||0} grad="linear-gradient(135deg,#004085,#002752)"/>
             <KPI val={porEstado["RETIRADO"]||0} label="RETIRADOS" pctVal={porEstado["RETIRADO"]||0} grad="linear-gradient(135deg,#721c24,#4e1217)"/>
             <KPI val={porEstado["REPROBADO"]||0} label="REPROBADOS" pctVal={porEstado["REPROBADO"]||0} grad="linear-gradient(135deg,#856404,#533f03)"/>
-            <KPI val={(porEstado["COMPROMISO CONVIVENCIAL"]||0)+(porEstado["COMPROMISO ACADEMICO"]||0)} label="EN COMPROMISO" pctVal={(porEstado["COMPROMISO CONVIVENCIAL"]||0)+(porEstado["COMPROMISO ACADEMICO"]||0)} grad="linear-gradient(135deg,#5a1e6b,#3b1247)"/>
-            <KPI val={porEstado["CONTINUIDAD"]||0} label="CONTINUIDAD" pctVal={porEstado["CONTINUIDAD"]||0} grad="linear-gradient(135deg,#495057,#212529)"/>
+            <KPI val={todosGrados.reduce((acc,g)=>{const obs=appState?.[g]?.obs||{};return acc+Object.values(obs).filter(o=>o?.CONV).length;},0)} label="COMP. CONVIVENCIAL" pctVal={0} grad="linear-gradient(135deg,#5a1e6b,#3b1247)"/>
+            <KPI val={todosGrados.reduce((acc,g)=>{const obs=appState?.[g]?.obs||{};return acc+Object.values(obs).filter(o=>o?.ACAD).length;},0)} label="COMP. ACADÉMICO" pctVal={0} grad="linear-gradient(135deg,#7c4a00,#4a2800)"/>
             <KPI val={conRuta} label="CON RUTA" pctVal={conRuta} grad="linear-gradient(135deg,#c01565,#7a0d41)"/>
             <KPI val={porGenero.M} label="HOMBRES" pctVal={porGenero.M} grad="linear-gradient(135deg,#0d6efd,#0a58ca)"/>
             <KPI val={porGenero.F} label="MUJERES" pctVal={porGenero.F} grad="linear-gradient(135deg,#d63384,#a71e5d)"/>
@@ -572,7 +573,7 @@ function ReportesTab({datosEscuela,appState}){
           </div>
           <div style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 1px 6px rgba(0,0,0,.08)",marginBottom:16}}>
             <div style={{fontWeight:700,fontSize:13,color:"#1e3a5f",marginBottom:12}}>🏫 Estudiantes por Grado</div>
-            <BarChart data={GRADOS_ORDEN.filter(g=>datosEscuela[g]).map(g=>({label:g,val:datosEscuela[g].estudiantes.length,color:"#1565c0"}))}/>
+            <BarChart data={todosGrados.map(g=>({label:g,val:(datosEscuela[g]?.estudiantes||[]).length,color:"#1565c0"}))}/>
           </div>
           {(porEstado["RETIRADO"]||0)>0&&(
             <div style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 1px 6px rgba(0,0,0,.08)"}}>
@@ -599,7 +600,7 @@ function ReportesTab({datosEscuela,appState}){
         <div>
           <div style={{background:"#fff",borderRadius:12,padding:14,marginBottom:14,boxShadow:"0 1px 6px rgba(0,0,0,.08)",display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
             {[
-              {label:"Grado",val:filtroGrado,set:setFG,opts:[["TODOS","Todos"],,...GRADOS_ORDEN.filter(g=>datosEscuela[g]).map(g=>[g,g])]},
+              {label:"Grado",val:filtroGrado,set:setFG,opts:[["TODOS","Todos"],,...todosGrados.map(g=>[g,g])]},
               {label:"Estado Comisión",val:filtroEstado,set:setFE,opts:[["TODOS","Todos"],...ESTADOS.map(e=>[e.key,e.label])]},
               {label:"Estado SIMAT",val:filtroSimat,set:setFS,opts:[["TODOS","Todos"],...SIMAT_ESTADOS.map(s=>[s.key,s.label])]},
               {label:"Ruta",val:filtroRuta,set:setFR,opts:[["TODOS","Todos"],["CON RUTA","Con ruta"],["SIN RUTA","Sin ruta"]]},
