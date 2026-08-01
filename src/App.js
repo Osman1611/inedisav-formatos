@@ -156,7 +156,9 @@ function AdminPanel({onClose,datosEscuela,onDataUpdate,onBorrar}){
           });
         });
         fbSet("datos",nd);onDataUpdate(nd);
-        setSimatMsg("✅ Cargado: "+Object.keys(nd).length+" grados, "+simat.length+" estudiantes");
+        const totalImportados=Object.values(nd).reduce((a,g)=>a+(g.estudiantes?.length||0),0);
+        const sinGrado=simat.filter(r=>!(r["GRADO"]||r["Grado"]||r["grado"]||"").toString().trim()).length;
+        setSimatMsg("✅ Cargado: "+Object.keys(nd).length+" grados, "+totalImportados+" estudiantes"+(sinGrado>0?" ("+sinGrado+" sin grado ignorados)":""));
       }catch(err){setSimatMsg("❌ Error: "+err.message);}
     };
     reader.readAsArrayBuffer(file);
